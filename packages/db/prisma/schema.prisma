@@ -1,0 +1,84 @@
+// 開発はSQLite、本番はSupabase(PostgreSQL)予定。
+// 移行しやすいよう、enum・配列・Json などPostgres専用機能は使わない。
+// status などの取りうる値は @claude-study/schemas のzodで検証する。
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          String   @id @default(cuid())
+  /** 認証プロバイダ(Supabase Auth)側のユーザーID */
+  authId      String   @unique
+  displayName String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+
+  progress  LessonProgress[]
+  attempts  QuizAttempt[]
+  badges    UserBadge[]
+  studyDays StudyDay[]
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonSlug  String
+  /// not_started | in_progress | completed
+  status      String
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonSlug])
+}
+
+model QuizAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  lessonSlug String
+  score      Int
+  total      Int
+  /// 回答のJSON文字列（読み書き時にzodで検証する）
+  answers    String
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lessonSlug])
+}
+
+model Badge {
+  key         String @id
+  title       String
+  description String
+
+  users UserBadge[]
+}
+
+model UserBadge {
+  userId   String
+  badgeKey String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeKey], references: [key], onDelete: Cascade)
+
+  @@id([userId, badgeKey])
+}
+
+model StudyDay {
+  userId String
+  /// YYYY-MM-DD
+  date   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, date])
+}

@@ -1,3 +1,9 @@
 packages:
   - apps/*
   - packages/*
+
+# ビルドスクリプトの実行を許可する依存（Prisma と SQLite ドライバのネイティブ処理に必要）
+onlyBuiltDependencies:
+  - prisma
+  - '@prisma/engines'
+  - better-sqlite3
