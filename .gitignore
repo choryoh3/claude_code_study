@@ -1,0 +1,27 @@
+node_modules/
+.next/
+dist/
+coverage/
+.turbo/
+.vercel/
+*.tsbuildinfo
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# local db
+*.db
+*.db-journal
+
+# claude local
+.claude/settings.local.json
+.claude/worktrees/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
