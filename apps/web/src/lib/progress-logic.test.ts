@@ -2,6 +2,9 @@ import type { LessonSummary } from '@claude-study/schemas';
 import { describe, expect, it } from 'vitest';
 import {
   EMPTY_PROGRESS,
+  isSameProgress,
+  mergeProgress,
+  type GuestProgress,
   countCompleted,
   hasPerfectQuiz,
   missingBadges,
@@ -183,5 +186,44 @@ describe('parseStoredProgress（クイズ・バッジ）', () => {
     const p = parseStoredProgress(raw);
     expect(Object.keys(p.quiz)).toEqual(['ok']);
     expect(Object.keys(p.badges)).toEqual(['first-lesson']);
+  });
+});
+
+describe('mergeProgress', () => {
+  const done = { status: 'completed', completedAt: '2026-10-02T00:00:00.000Z' } as const;
+  const doneLater = { status: 'completed', completedAt: '2026-10-05T00:00:00.000Z' } as const;
+  const doing = { status: 'in_progress', completedAt: null } as const;
+  const a: GuestProgress = {
+    entries: { x: doing, y: doneLater },
+    studyDays: ['2026-10-01'],
+    quiz: { x: { score: 1, total: 4 } },
+    badges: { 'first-lesson': '2026-10-03T00:00:00.000Z' },
+  };
+  const b: GuestProgress = {
+    entries: { x: done, z: doing },
+    studyDays: ['2026-10-02', '2026-10-01'],
+    quiz: { x: { score: 3, total: 4 } },
+    badges: { 'first-lesson': '2026-10-01T00:00:00.000Z' },
+  };
+
+  it('より進んだ状態を採り、完了日時は早いほうを残す', () => {
+    const m = mergeProgress(a, b);
+    expect(m.entries.x).toEqual(done);
+    expect(m.entries.y).toEqual(doneLater);
+    expect(m.entries.z).toEqual(doing);
+  });
+
+  it('クイズは正答率の高いほう、学習日は和集合、バッジは早い獲得日時', () => {
+    const m = mergeProgress(a, b);
+    expect(m.quiz.x).toEqual({ score: 3, total: 4 });
+    expect(m.studyDays).toEqual(['2026-10-01', '2026-10-02']);
+    expect(m.badges['first-lesson']).toBe('2026-10-01T00:00:00.000Z');
+  });
+
+  it('順序に依存せず、空の状態との統合では元の内容が変わらない', () => {
+    const ab = mergeProgress(a, b);
+    const ba = mergeProgress(b, a);
+    expect(isSameProgress(ab, ba)).toBe(true);
+    expect(isSameProgress(mergeProgress(a, EMPTY_PROGRESS), a)).toBe(true);
   });
 });

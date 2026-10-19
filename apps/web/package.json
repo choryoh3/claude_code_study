@@ -13,6 +13,7 @@
     "@claude-study/api": "workspace:*",
     "@claude-study/content": "workspace:*",
     "@claude-study/schemas": "workspace:*",
+    "@supabase/supabase-js": "2",
     "hono": "^4.13.13",
     "lucide-react": "1.59.0",
     "next": "16.4.2",

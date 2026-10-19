@@ -2,7 +2,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import styles from './legal-document.module.css';
 
 /** 規約・ポリシーの最終更新日。内容を変えたら、この日付も更新する。 */
-export const LEGAL_UPDATED = '2026-10-19';
+export const LEGAL_UPDATED = '2026-10-20';
 
 const SECTIONS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7'] as const;
 const ISSUES_URL = 'https://github.com/choryoh3/claude_code_study/issues';

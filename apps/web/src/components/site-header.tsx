@@ -1,6 +1,7 @@
 import { Terminal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { AuthControl } from './auth-control';
 import { PaletteTrigger } from './command-palette';
 import { DesktopNav } from './site-nav';
 import { ThemeToggle } from './theme-toggle';
@@ -20,6 +21,7 @@ export function SiteHeader() {
         <DesktopNav />
         <PaletteTrigger />
         <ThemeToggle />
+        <AuthControl />
       </div>
     </header>
   );

@@ -177,3 +177,69 @@ export function parseStoredProgress(raw: string | null): GuestProgress {
     return EMPTY_PROGRESS;
   }
 }
+
+const STATUS_RANK: Record<ProgressStatus, number> = {
+  not_started: 0,
+  in_progress: 1,
+  completed: 2,
+};
+
+/**
+ * 端末の進捗とクラウドの進捗を、失わないように統合する（ログイン時・他端末の更新を取り込むとき）。
+ * - レッスン: より進んだ状態を採用。完了日時は、早いほうを残す
+ * - クイズ: 正答率の高いほう
+ * - 学習日: 和集合。バッジ: 和集合で、獲得日時は早いほう
+ * 結果は順序に依存しない（merge(a,b) と merge(b,a) が同じ）。
+ */
+export function mergeProgress(a: GuestProgress, b: GuestProgress): GuestProgress {
+  const entries: GuestProgress['entries'] = {};
+  for (const slug of new Set([...Object.keys(a.entries), ...Object.keys(b.entries)])) {
+    const x = a.entries[slug];
+    const y = b.entries[slug];
+    if (!x || !y) {
+      entries[slug] = (x ?? y)!;
+      continue;
+    }
+    const winner = STATUS_RANK[x.status] >= STATUS_RANK[y.status] ? x : y;
+    const times = [x.completedAt, y.completedAt].filter((t): t is string => t !== null).sort();
+    entries[slug] = {
+      status: winner.status,
+      completedAt: winner.status === 'completed' ? (times[0] ?? null) : null,
+    };
+  }
+
+  const quiz: GuestProgress['quiz'] = { ...a.quiz };
+  for (const [slug, q] of Object.entries(b.quiz)) {
+    const mine = quiz[slug];
+    if (!mine || q.score / q.total > mine.score / mine.total) quiz[slug] = q;
+  }
+
+  const badges: GuestProgress['badges'] = { ...a.badges };
+  for (const [key, at] of Object.entries(b.badges) as [BadgeKey, string][]) {
+    const mine = badges[key];
+    if (!mine || at < mine) badges[key] = at;
+  }
+
+  return {
+    entries,
+    studyDays: [...new Set([...a.studyDays, ...b.studyDays])].sort(),
+    quiz,
+    badges,
+  };
+}
+
+/** 中身が同じか（保存の要否の判定に使う） */
+export function isSameProgress(a: GuestProgress, b: GuestProgress): boolean {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+function canonical(p: GuestProgress) {
+  const sorted = <T>(o: Record<string, T>) =>
+    Object.fromEntries(Object.entries(o).sort(([k], [l]) => k.localeCompare(l)));
+  return {
+    entries: sorted(p.entries),
+    studyDays: [...p.studyDays].sort(),
+    quiz: sorted(p.quiz),
+    badges: sorted(p.badges),
+  };
+}
