@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 import { statusOf } from '@/lib/progress-logic';
 import { setLessonStatus, useIsClient, useProgress } from '@/lib/progress-store';
@@ -8,6 +9,7 @@ import styles from './lesson-actions.module.css';
 
 /** 開いただけで「学習中」にし、読み終えたら手動で「完了」にできる */
 export function LessonActions({ slug }: { slug: string }) {
+  const t = useTranslations('lessonActions');
   const progress = useProgress();
   const ready = useIsClient();
   const status = statusOf(progress, slug);
@@ -34,16 +36,14 @@ export function LessonActions({ slug }: { slug: string }) {
         {done ? (
           <>
             <Check size={18} aria-hidden="true" />
-            完了済み（クリックで戻す）
+            {t('done')}
           </>
         ) : (
-          'このレッスンを完了にする'
+          t('complete')
         )}
       </button>
       <p className={styles.note} role="status" aria-live="polite">
-        {done
-          ? 'おつかれさまでした。次のレッスンへ進みましょう。'
-          : '内容を試し終えたら、完了にしましょう。'}
+        {done ? t('noteDone') : t('noteTodo')}
       </p>
     </div>
   );

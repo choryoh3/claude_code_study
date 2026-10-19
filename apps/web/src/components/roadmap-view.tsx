@@ -2,6 +2,7 @@
 
 import type { LessonSummary } from '@claude-study/schemas';
 import { Check, Circle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { lessonHref } from '@/lib/lesson-href';
 import type { LevelGroup } from '@/lib/lessons';
@@ -9,13 +10,10 @@ import { countCompleted, pickNextLesson, statusOf } from '@/lib/progress-logic';
 import { useIsClient, useProgress } from '@/lib/progress-store';
 import styles from './roadmap-view.module.css';
 
-const STATUS_LABEL = {
-  completed: '完了',
-  in_progress: '学習中',
-  not_started: '未着手',
-} as const;
-
 export function RoadmapView({ groups }: { groups: LevelGroup[] }) {
+  const t = useTranslations('roadmap');
+  const tLevels = useTranslations('levels');
+  const tCommon = useTranslations('common');
   const progress = useProgress();
   // localStorage を読むまでは進捗に依存する表示（次はここ・状態）を出さず、誤った情報が一瞬見えるのを避ける
   const ready = useIsClient();
@@ -35,11 +33,13 @@ export function RoadmapView({ groups }: { groups: LevelGroup[] }) {
           >
             <header className={styles.levelHead}>
               <span className="level-chip" data-level={group.level}>
-                {group.name}
+                {tLevels(`${group.level}.name`)}
               </span>
-              <h2 id={`level-${group.level}`}>{group.tagline}</h2>
+              <h2 id={`level-${group.level}`}>{tLevels(`${group.level}.tagline`)}</h2>
               <p className={styles.count}>
-                {group.lessons.length > 0 ? `${done} / ${group.lessons.length} 完了` : '準備中'}
+                {group.lessons.length > 0
+                  ? t('count', { done, total: group.lessons.length })
+                  : tCommon('comingSoon')}
               </p>
             </header>
 
@@ -66,8 +66,8 @@ export function RoadmapView({ groups }: { groups: LevelGroup[] }) {
                         <span className={styles.summary}>{lesson.summary}</span>
                       </span>
                       <span className={styles.state}>
-                        {isNext && <span className={styles.nextTag}>次はここ</span>}
-                        <span className={styles.statusText}>{STATUS_LABEL[status]}</span>
+                        {isNext && <span className={styles.nextTag}>{t('next')}</span>}
+                        <span className={styles.statusText}>{t(`status.${status}`)}</span>
                       </span>
                     </Link>
                   </li>
@@ -79,7 +79,7 @@ export function RoadmapView({ groups }: { groups: LevelGroup[] }) {
                   <span className={styles.dot} aria-hidden="true" />
                   <Link href={lessonHref(group.level, topic.slug)} className={styles.planned}>
                     <span className={styles.title}>{topic.title}</span>
-                    <span className={styles.soon}>準備中</span>
+                    <span className={styles.soon}>{tCommon('comingSoon')}</span>
                   </Link>
                 </li>
               ))}

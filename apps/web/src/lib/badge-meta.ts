@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-/** バッジのアイコン（Lucide）。タイトルと説明は packages/schemas の BADGE_DEFINITIONS。 */
+/** バッジのアイコン（Lucide）。タイトル・説明・ヒントは辞書（messages の `badges.items`）にある。 */
 export const BADGE_ICONS: Record<BadgeKey, LucideIcon> = {
   'first-lesson': Sprout,
   'basic-complete': Compass,
@@ -19,15 +19,4 @@ export const BADGE_ICONS: Record<BadgeKey, LucideIcon> = {
   'quiz-perfect': Target,
   'streak-3': Flame,
   'streak-7': Zap,
-};
-
-/** まだ獲得していないバッジに添える「どうすれば取れるか」のヒント */
-export const BADGE_HINTS: Record<BadgeKey, string> = {
-  'first-lesson': 'レッスンを1つ完了にする',
-  'basic-complete': '基礎のレッスンをすべて完了にする',
-  'intermediate-complete': '中級のレッスンをすべて完了にする',
-  'advanced-complete': '上級のレッスンをすべて完了にする',
-  'quiz-perfect': 'いずれかのクイズで全問正解する',
-  'streak-3': '3日連続で、レッスンかクイズに取り組む',
-  'streak-7': '7日連続で、レッスンかクイズに取り組む',
 };

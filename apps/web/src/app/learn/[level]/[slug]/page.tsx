@@ -1,13 +1,14 @@
 import { findPlannedTopic, PLANNED_TOPICS } from '@claude-study/content';
 import { levelSchema } from '@claude-study/schemas';
-import type { Metadata } from 'next';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
 import { LessonActions } from '@/components/lesson-actions';
-import { mdxComponents, SECTION_IDS } from '@/components/mdx-components';
+import { createMdxComponents, SECTION_IDS } from '@/components/mdx-components';
 import { QuizPanel } from '@/components/quiz-panel';
 import { getLesson, getLessons, lessonHref, toSummary } from '@/lib/lessons';
 import styles from './lesson.module.css';
@@ -32,15 +33,20 @@ export function generateStaticParams(): Params[] {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { level, slug } = await params;
+  const t = await getTranslations('lesson');
   const lesson = getLesson(level, slug);
   if (lesson) return { title: lesson.frontmatter.title, description: lesson.frontmatter.summary };
   const planned = findPlannedTopic(level, slug);
-  return { title: planned ? `${planned.title}（準備中）` : '見つかりません' };
+  return { title: planned ? t('plannedTitle', { title: planned.title }) : t('notFoundTitle') };
 }
 
 export default async function LessonPage({ params }: { params: Promise<Params> }) {
   const { level, slug } = await params;
   if (!levelSchema.safeParse(level).success) notFound();
+
+  const t = await getTranslations('lesson');
+  const tLevels = await getTranslations('levels');
+  const tCommon = await getTranslations('common');
 
   const lesson = getLesson(level, slug);
   if (!lesson) {
@@ -49,14 +55,12 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
     return (
       <div className={`container ${styles.soon}`}>
         <span className="level-chip" data-level={level}>
-          準備中
+          {tCommon('comingSoon')}
         </span>
         <h1>{planned.title}</h1>
-        <p>
-          このレッスンは現在準備しています。公式ドキュメントで内容を確認しながら執筆するため、公開まで少しお待ちください。
-        </p>
+        <p>{t('plannedBody')}</p>
         <Link className="btn btn-primary" href="/roadmap">
-          ロードマップに戻る
+          {t('backToRoadmap')}
         </Link>
       </div>
     );
@@ -68,18 +72,27 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
   const next = all[index + 1];
   const { title, summary, verifiedAt } = lesson.frontmatter;
 
-  // 本文を「次へ」の見出しの直前で分け、そのあいだにクイズを挟む
-  const splitAt = lesson.body.indexOf('\n## 次へ');
+  // 見出しのアンカーID。固定フォーマットの順序（SECTION_IDS）に、本文の見出しを位置で対応させる。
+  // 見出しの文言（言語ごとに違う）をコードに直書きしないための対応。
+  const headingIds = Object.fromEntries(lesson.headings.map((h, i) => [h, SECTION_IDS[i] ?? '']));
+  const mdxComponents = createMdxComponents({
+    headingIds,
+    tableLabel: t('tableLabel'),
+  });
+
+  // 本文を最後のH2（「次へ」）の直前で分け、そのあいだにクイズを挟む
+  const lastHeading = lesson.headings[lesson.headings.length - 1];
+  const splitAt = lastHeading ? lesson.body.lastIndexOf(`\n## ${lastHeading}`) : -1;
   const beforeNext = splitAt >= 0 ? lesson.body.slice(0, splitAt) : lesson.body;
   const afterNext = splitAt >= 0 ? lesson.body.slice(splitAt + 1) : '';
-  // 目次: クイズは「次へ」の直前に入れる
-  const tocItems = lesson.headings.flatMap((h) =>
-    h === '次へ'
+  // 目次: クイズは最後の見出しの直前に入れる
+  const tocItems = lesson.headings.flatMap((h, i) =>
+    i === lesson.headings.length - 1
       ? [
-          { label: 'クイズ', id: 'quiz-section' },
-          { label: h, id: SECTION_IDS[h] },
+          { label: t('tocQuiz'), id: 'quiz-section' },
+          { label: h, id: headingIds[h] },
         ]
-      : [{ label: h, id: SECTION_IDS[h] }],
+      : [{ label: h, id: headingIds[h] }],
   );
 
   return (
@@ -87,13 +100,15 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
       <article className={styles.article}>
         <header className={styles.header}>
           <span className="level-chip" data-level={lesson.level}>
-            {lesson.level === 'basic' ? '基礎' : lesson.level === 'intermediate' ? '中級' : '上級'}
-            ・{String(lesson.frontmatter.order).padStart(2, '0')}
+            {t('chip', {
+              level: tLevels(`${lesson.level}.name`),
+              order: String(lesson.frontmatter.order).padStart(2, '0'),
+            })}
           </span>
           <h1>{title}</h1>
           <p className={styles.summary}>{summary}</p>
           <p className={styles.verified}>
-            公式ドキュメントで確認した日: <time dateTime={verifiedAt}>{verifiedAt}</time>
+            {t('verified')} <time dateTime={verifiedAt}>{verifiedAt}</time>
           </p>
         </header>
 
@@ -118,11 +133,11 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
           </div>
         )}
 
-        <nav className={styles.pager} aria-label="前後のレッスン">
+        <nav className={styles.pager} aria-label={t('pagerLabel')}>
           {prev ? (
             <Link href={lessonHref(prev.level, prev.slug)} rel="prev">
               <span>
-                <ArrowLeft size={14} aria-hidden="true" /> 前のレッスン
+                <ArrowLeft size={14} aria-hidden="true" /> {t('prev')}
               </span>
               {prev.title}
             </Link>
@@ -132,7 +147,7 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
           {next && (
             <Link href={lessonHref(next.level, next.slug)} rel="next" data-align="end">
               <span>
-                次のレッスン <ArrowRight size={14} aria-hidden="true" />
+                {t('next')} <ArrowRight size={14} aria-hidden="true" />
               </span>
               {next.title}
             </Link>
@@ -140,9 +155,9 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
         </nav>
       </article>
 
-      <aside className={styles.aside} aria-label="このレッスンについて">
-        <nav aria-label="目次" className={styles.toc}>
-          <h2>目次</h2>
+      <aside className={styles.aside} aria-label={t('asideLabel')}>
+        <nav aria-label={t('tocLabel')} className={styles.toc}>
+          <h2>{t('tocTitle')}</h2>
           <ol>
             {tocItems.map((item) => (
               <li key={item.id}>

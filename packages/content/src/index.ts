@@ -11,7 +11,7 @@ export {
   parseLesson,
 } from './parse';
 export type { ParsedLesson } from './parse';
-export { LEVEL_LABELS, PLANNED_TOPICS, findPlannedTopic } from './outline';
+export { PLANNED_TOPICS, findPlannedTopic } from './outline';
 export type { PlannedTopic } from './outline';
 export {
   ReferenceError,

@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import styles from './progress-ring.module.css';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 
 /** 進捗リング。値が変わると、線が滑らかに伸びる（動きを減らす設定では即時）。 */
 export function ProgressRing({ value, max, size = 148, label }: Props) {
+  const t = useTranslations('progressRing');
   const stroke = Math.round(size * 0.09);
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -20,7 +22,7 @@ export function ProgressRing({ value, max, size = 148, label }: Props) {
       className={styles.ring}
       style={{ width: size, height: size }}
       role="img"
-      aria-label={`${label}: ${value} / ${max}（${percent}%）`}
+      aria-label={t('aria', { label, value, max, percent })}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         <circle

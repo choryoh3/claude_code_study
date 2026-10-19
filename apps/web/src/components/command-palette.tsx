@@ -1,6 +1,7 @@
 'use client';
 
 import { BookOpen, BookText, CornerDownLeft, FileText, ListChecks, Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api-client';
@@ -16,25 +17,19 @@ import styles from './command-palette.module.css';
 
 export const OPEN_PALETTE_EVENT = 'claude-study:open-palette';
 
-const GROUP_LABEL: Record<PaletteGroup, string> = {
-  page: 'ページ',
-  lesson: 'レッスン',
-  reference: 'チートシート・用語集',
-};
-
 const GROUP_ICON: Record<PaletteGroup, ReactNode> = {
   page: <FileText size={16} aria-hidden="true" />,
   lesson: <BookOpen size={16} aria-hidden="true" />,
   reference: <ListChecks size={16} aria-hidden="true" />,
 };
 
-const PAGES = NAV_ITEMS.map(({ href, label }) => ({ href, label }));
-
 /**
  * ⌘K / Ctrl+K で開く検索パレット。ページ・レッスン（APIの全文検索）・チートシート/用語集を横断して探せる。
  * ネイティブの <dialog> を使うので、フォーカスの閉じ込めと Esc での閉じる動作はブラウザが担う。
  */
 export function CommandPalette({ reference }: { reference: ReferenceEntry[] }) {
+  const t = useTranslations('palette');
+  const tNav = useTranslations('nav');
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -105,7 +100,10 @@ export function CommandPalette({ reference }: { reference: ReferenceEntry[] }) {
   }, [query]);
 
   const results: PaletteResult[] = [
-    ...filterPages(PAGES, query),
+    ...filterPages(
+      NAV_ITEMS.map(({ href, key }) => ({ href, label: tNav(`items.${key}`) })),
+      query,
+    ),
     ...lessons,
     ...filterReference(reference, query),
   ];
@@ -141,7 +139,7 @@ export function CommandPalette({ reference }: { reference: ReferenceEntry[] }) {
     <dialog
       ref={dialogRef}
       className={styles.dialog}
-      aria-label="検索"
+      aria-label={t('dialog')}
       onClose={() => {
         setQuery('');
         setActive(0);
@@ -163,7 +161,7 @@ export function CommandPalette({ reference }: { reference: ReferenceEntry[] }) {
             aria-controls={listId}
             aria-activedescendant={results.length ? `${listId}-${safeActive}` : undefined}
             aria-autocomplete="list"
-            placeholder="レッスン・コマンド・用語を検索"
+            placeholder={t('placeholder')}
             autoComplete="off"
             spellCheck={false}
             value={query}
@@ -176,7 +174,7 @@ export function CommandPalette({ reference }: { reference: ReferenceEntry[] }) {
           <kbd className={styles.esc}>Esc</kbd>
         </div>
 
-        <ul id={listId} role="listbox" aria-label="検索結果" className={styles.list}>
+        <ul id={listId} role="listbox" aria-label={t('results')} className={styles.list}>
           {results.map((r, i) => {
             const heading = r.group !== lastGroup;
             lastGroup = r.group;
@@ -184,7 +182,7 @@ export function CommandPalette({ reference }: { reference: ReferenceEntry[] }) {
               <li key={r.id} role="presentation">
                 {heading && (
                   <p className={styles.group} role="presentation">
-                    {GROUP_LABEL[r.group]}
+                    {t(`groups.${r.group}`)}
                   </p>
                 )}
                 <div
@@ -212,25 +210,25 @@ export function CommandPalette({ reference }: { reference: ReferenceEntry[] }) {
 
         {results.length === 0 && (
           <p className={styles.empty} role="status">
-            「{query.trim()}」に一致するものが見つかりませんでした。
+            {t('noResults', { query: query.trim() })}
           </p>
         )}
         {searchError && (
           <p className={styles.empty} role="status">
-            レッスンの検索に失敗しました。ページとチートシートは検索できます。
+            {t('searchFailed')}
           </p>
         )}
 
         <footer className={styles.footer} aria-hidden="true">
           <span>
             <kbd>↑</kbd>
-            <kbd>↓</kbd> 選択
+            <kbd>↓</kbd> {t('hintSelect')}
           </span>
           <span>
-            <kbd>Enter</kbd> 開く
+            <kbd>Enter</kbd> {t('hintOpen')}
           </span>
           <span className={styles.footerBrand}>
-            <BookText size={12} /> 学習ロードマップ
+            <BookText size={12} /> {t('brand')}
           </span>
         </footer>
       </div>
@@ -240,17 +238,18 @@ export function CommandPalette({ reference }: { reference: ReferenceEntry[] }) {
 
 /** ヘッダーに置く、パレットを開くボタン */
 export function PaletteTrigger() {
+  const t = useTranslations('palette');
   return (
     <button
       type="button"
       className={styles.trigger}
       onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
-      aria-label="検索を開く（Ctrl+K または ⌘K）"
+      aria-label={t('open')}
     >
       <Search size={18} aria-hidden="true" />
-      <span className={styles.triggerLabel}>検索</span>
+      <span className={styles.triggerLabel}>{t('trigger')}</span>
       <kbd className={styles.triggerKey} aria-hidden="true">
-        Ctrl K
+        {t('triggerKey')}
       </kbd>
     </button>
   );

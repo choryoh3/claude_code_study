@@ -15,12 +15,6 @@ export const PLANNED_TOPICS: Record<Exclude<Level, 'basic'>, PlannedTopic[]> = {
   advanced: [],
 };
 
-export const LEVEL_LABELS: Record<Level, { name: string; tagline: string }> = {
-  basic: { name: '基礎', tagline: '基本操作と、安全に任せる考え方' },
-  intermediate: { name: '中級', tagline: '設定と拡張で、自分仕様に育てる' },
-  advanced: { name: '上級', tagline: '並列化と自己検証で、チームの戦力にする' },
-};
-
 /** 準備中のトピックを探す（公開済みのレッスンは含まない） */
 export function findPlannedTopic(level: string, slug: string): PlannedTopic | undefined {
   if (level !== 'intermediate' && level !== 'advanced') return undefined;
