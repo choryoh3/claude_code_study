@@ -44,3 +44,4 @@ Supabase/Vercelのプロジェクト作成、GitHubリポジトリ作成・push�
 - 手順化した作業: `.claude/skills/`
 - 専門エージェント: `.claude/agents/`
 - 権限とhooks: `.claude/settings.json`（配置理由は `docs/claude-layout.md`）
+- GitHub（CI・セキュリティ・ブランチ保護・Copilot）: `.github/`（全体像と理由は `docs/github-setup.md`）

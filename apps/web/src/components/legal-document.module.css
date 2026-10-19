@@ -1,0 +1,39 @@
+.doc {
+  max-width: var(--reading-width);
+  margin-inline: auto;
+  padding-block: var(--space-7);
+}
+
+.doc h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+}
+
+.updated {
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.lead {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-lg);
+}
+
+.doc h2 {
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: var(--text-xl);
+}
+
+.body {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.contact {
+  margin-top: var(--space-7);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+}

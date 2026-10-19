@@ -1,0 +1,16 @@
+# =============================================================================
+# Issue テンプレート選択画面の設定
+# -----------------------------------------------------------------------------
+# blank_issues_enabled: false
+#   テンプレートを使わない白紙 Issue を禁止する。
+#   なぜ: 再現手順や環境が欠けた Issue は、聞き返しの往復でトリアージ時間を浪費するため。
+# contact_links:
+#   Issue 以外の窓口へ誘導する。特に脆弱性は公開 Issue に書かせない（攻撃者にも見えるため）。
+# 読む主体: GitHub 本体（Issue テンプレート選択画面の設定）。Actions も Copilot も関与しない。
+# =============================================================================
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 脆弱性の報告（非公開）
+    # Private vulnerability reporting を有効にしておくと、報告者とメンテナーだけが見られる場で議論できる。
+    url: https://github.com/choryoh3/claude_code_study/security/advisories/new
+    about: セキュリティ上の問題は公開 Issue ではなく、こちらから非公開で報告してください。

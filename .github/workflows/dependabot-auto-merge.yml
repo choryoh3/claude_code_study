@@ -1,0 +1,58 @@
+# =============================================================================
+# Dependabot 自動マージ: 低リスクな依存更新を人手なしで取り込む
+# -----------------------------------------------------------------------------
+# 目的:
+#   パッチ更新のような低リスクな PR を毎週手でマージする作業をなくし、
+#   依存を常に新しく保つ（古い依存ほど、いざという時のメジャー更新が辛くなる）。
+# 安全装置:
+#   - ここで行うのは「auto-merge の予約」だけ。実際のマージは ruleset の必須チェック
+#     （CI・Dependency Review 等）と必須レビューがすべて満たされた時点で GitHub が行う。
+#     CI が落ちればマージされない。
+#   - 対象は semver の patch 更新と、開発依存（devDependencies）の minor 更新のみ。
+#     major 更新や本番依存の minor 更新は、破壊的変更の可能性があるので必ず人がレビューする。
+#   - dependabot.yml の cooldown により、公開直後（乗っ取り直後の可能性がある）版は取り込まない。
+# 前提:
+#   Settings > General > Pull Requests の「Allow auto-merge」を有効にする。
+#   ruleset で承認レビューを必須にしている場合は、人が Approve した時点でマージされる
+#   （GitHub Actions に PR の承認を許可する設定は、権限昇格の経路になるため有効にしない）。
+# 実行主体: GitHub Actions（Dependabot が作った PR に反応して実行）。Dependabot 自体は dependabot.yml を読む GitHub 本体の機能で、このファイルは読まない。Copilot は関与しない。
+# =============================================================================
+name: Dependabot Auto-merge
+
+on:
+  # pull_request_target ではなく pull_request を使う。
+  # Dependabot が作った PR の pull_request イベントでは、permissions で明示した範囲までトークン権限を上げられる。
+  pull_request:
+
+permissions: {}
+
+jobs:
+  auto-merge:
+    name: auto-merge
+    # github.actor ではなく PR 作成者で判定する。
+    # github.actor は「そのイベントを起こした人」なので、Dependabot の PR に人が push した場合などに
+    # 判定が揺らぐ。PR の作成者（user.login）はなりすましできない。
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # auto-merge を有効化するために必要な最小権限。
+      contents: write
+      pull-requests: write
+    steps:
+      # 更新内容（patch / minor / major、本番依存か開発依存か）を取得する。
+      # この action はコミットが本当に Dependabot によるものか（署名）も検証する。
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Enable auto-merge for low-risk updates
+        if: >-
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          (steps.metadata.outputs.dependency-type == 'direct:development' &&
+           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # --squash: リポジトリ方針（squash のみ）に合わせる。
+        run: gh pr merge --auto --squash "$PR_URL"

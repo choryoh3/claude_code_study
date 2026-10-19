@@ -1,0 +1,48 @@
+# =============================================================================
+# 機能要望テンプレート（Issue Forms）
+# -----------------------------------------------------------------------------
+# 「解決策」より先に「課題」を書かせる構成にしている。
+# なぜ: 要望者が思いついた解決策が最適とは限らない。課題が明確なら、
+#       より良い別解（既存機能の改善・設定変更など）を検討できるため。
+# 「受け入れ条件」は、そのまま Copilot cloud agent や実装者への完了条件として使える。
+# 読む主体: GitHub 本体（Issue 作成画面のフォームを描画する）。Actions は動かない。Copilot cloud agent に Issue を割り当てると、入力内容が作業指示として読まれる。
+# =============================================================================
+name: ✨ 機能要望
+description: 新しい機能や改善を提案する
+title: 'feat: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 解決したい課題
+      description: 誰が・どんな場面で・何に困っているかを書いてください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案する解決策
+      description: 思いついている案があれば。
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      description: 何が満たされれば「完了」と言えるか。検証可能な形で箇条書きにしてください。
+      placeholder: |
+        - [ ] ○○の画面で△△ができる
+        - [ ] 未ログインの場合は××になる
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 検討した代替案
+      description: 他の方法を検討した場合、採用しなかった理由も含めて。
+    validations:
+      required: false

@@ -1,19 +1,102 @@
+# =============================================================================
+# CI: 品質ゲート（format / lint / typecheck / test / build）
+# -----------------------------------------------------------------------------
+# 目的:
+#   main に入るコードが常に「ビルドでき、テストが通る」状態であることを機械的に保証する。
+# 設計方針:
+#   - ローカルと CI で同じコマンド（pnpm verify）を実行する。
+#     CI 専用の手順を増やすと「ローカルでは通るのに CI で落ちる」原因になるため。
+#   - ブランチ保護（ruleset）の必須チェックには、末尾の `ci-success` ジョブ 1 つだけを登録する。
+#     ジョブを増減しても ruleset を触らずに済む（後述）。
+# 他プロジェクトへの応用:
+#   `pnpm verify` の行を各プロジェクトの検証コマンド（make check / ./gradlew check 等）に
+#   置き換え、.github/actions/setup の中身を言語に合わせて差し替えるだけでよい。
+# 実行主体: GitHub Actions（ランナー上でコードとして実行され、Actions の実行時間を消費する）。Copilot は関与しない。
+# =============================================================================
 name: CI
 
 on:
+  # main への push: マージ後の main が壊れていないことを確認する（バッジやデプロイ判定にも使える）。
   push:
     branches: [main]
+  # PR: マージ前の検証。fork からの PR でもシークレットが渡らない安全なイベント。
+  # pull_request_target は fork の PR に書き込み権限とシークレットを与えてしまうため、
+  # 「PR のコードを実行する」ワークフローでは絶対に使わない。
+  #
+  # 注意: ここに paths / paths-ignore を付けないこと。
+  #   必須チェックに登録したワークフローがパス条件でスキップされると、
+  #   チェックが「Pending」のまま残り、PR が永遠にマージできなくなる。
   pull_request:
+  # マージキュー（ruleset で有効化した場合）でも必須チェックを走らせるためのイベント。
+  # 未使用なら何も起きないので、将来の有効化に備えて最初から入れておく。
+  merge_group:
+  # Actions タブから手動実行できるようにする（キャッシュ問題の切り分けなどに便利）。
+  workflow_dispatch:
+
+# GITHUB_TOKEN の権限をワークフロー全体で最小化する（最小権限の原則）。
+# 既定の権限はリポジトリ設定次第で write になり得るため、明示的に read のみに絞る。
+# 書き込みが必要なジョブだけ、ジョブ単位で個別に権限を足す。
+permissions:
+  contents: read
+
+# 同じ PR に連続 push したとき、古い実行をキャンセルしてランナー時間を節約する。
+#   - group: PR 番号（push の場合は ref）単位でまとめる。
+#   - cancel-in-progress: PR のときだけ true。
+#     main への push はキャンセルしない。全コミットの結果を残し、どのコミットで壊れたか追えるようにするため。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
+    name: verify
     runs-on: ubuntu-latest
+    # 既定のタイムアウトは 360 分。ハングしたテストで無駄にランナー時間を消費しないよう、
+    # 通常の実行時間の 3〜5 倍程度に抑える。
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      # persist-credentials: false
+      #   checkout は既定で GITHUB_TOKEN を .git/config に保存する。
+      #   後続のステップ（依存パッケージの postinstall スクリプト等）からトークンを盗まれる余地を消すため、
+      #   git push が不要なジョブでは必ず false にする。
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm verify
+          persist-credentials: false
+
+      # ランタイムと依存のセットアップは composite action に集約（.github/actions/setup/action.yml）。
+      # `./` は checkout したワークスペース内の action を指す（そのため checkout の後に置く）。
+      # GitHub の新しい self-repository 構文 `$/` は actionlint が未対応のため、現時点では使わない
+      # （経緯と移行条件は .github/zizmor.yml の self-repository を参照）。
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      # ローカルと同じ完了判定コマンド。中身は scripts/verify.mjs を参照。
+      - name: Verify
+        run: pnpm verify
+
+  # ---------------------------------------------------------------------------
+  # ci-success: 必須チェック用の「集約ジョブ」
+  # ---------------------------------------------------------------------------
+  # なぜ必要か:
+  #   ruleset の必須チェックはジョブ名で登録する。ジョブを分割・追加・改名するたびに
+  #   ruleset も更新する運用は漏れやすい（漏れると未検証のコードがマージできてしまう）。
+  #   このジョブだけを必須にしておけば、needs に足すだけで新しいジョブも必須化できる。
+  # if: always()
+  #   needs のジョブが失敗しても、このジョブ自体は必ず実行させる。
+  #   既定（success()）だと失敗時にこのジョブが「skipped」になり、
+  #   GitHub は skipped を成功扱いするため、失敗した PR がマージできてしまう。
+  ci-success:
+    name: ci-success
+    if: always()
+    needs: [verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # needs のいずれかが failure / cancelled なら失敗させる。
+      # skipped は「条件付きで不要と判断されたジョブ」なので成功扱いのままにする。
+      - name: Fail if any required job did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - name: All required jobs passed
+        run: echo "All required jobs passed."

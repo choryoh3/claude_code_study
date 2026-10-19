@@ -22,7 +22,13 @@
   color: var(--text);
 }
 
-.triggerKey {
+/*
+ * ショートカットの表示（Ctrl K）。DOM のテキストではなく CSS の疑似要素にしているのは、
+ * 「見えているラベルを、読み上げ名（aria-label）に含める」(WCAG 2.5.3) を満たすため。
+ * ショートカット自体は aria-keyshortcuts で、支援技術に伝えている。
+ */
+.trigger::after {
+  content: attr(data-shortcut);
   display: none;
   padding: 0 var(--space-2);
   border: 1px solid var(--border-strong);
@@ -43,7 +49,7 @@
 }
 
 @media (min-width: 52rem) {
-  .triggerKey {
+  .trigger::after {
     display: inline;
   }
 }

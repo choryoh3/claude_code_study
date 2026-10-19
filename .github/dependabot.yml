@@ -1,0 +1,81 @@
+# =============================================================================
+# Dependabot: 依存関係の自動更新
+# -----------------------------------------------------------------------------
+# 目的:
+#   ライブラリと GitHub Actions を継続的に最新へ追従させ、
+#   脆弱性の修正版を素早く取り込める状態を保つ。
+# 方針:
+#   - 週 1 回にまとめる（毎日だと PR が多すぎてレビューされなくなり、形骸化する）
+#   - minor / patch はグループ化して 1 PR にまとめる（PR 数とCI実行回数を減らす）
+#   - major は個別 PR（破壊的変更を 1 つずつ確認できるように）
+#   - cooldown で公開直後のバージョンを避ける（後述）
+# 注意:
+#   セキュリティ更新（脆弱性の修正）はこのスケジュールとは別に即時作成される。
+#   Settings > Code security で「Dependabot security updates」を有効にすること。
+# 読む主体: Dependabot（GitHub 本体の機能。Actions のワークフローではなく、実行時間も消費しない）。ただし作られた PR には Actions の検査が走る。
+# =============================================================================
+version: 2
+
+updates:
+  # ---------------------------------------------------------------------------
+  # npm エコシステム（pnpm の lockfile にも対応。ワークスペース全体をルートから扱う）
+  # 他プロジェクトへの応用: pip / uv / gomod / maven / gradle / cargo / docker / terraform 等に変える。
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      # 指定しないと UTC になる。チームの勤務時間の始まりに PR が揃うようにする。
+      timezone: Asia/Tokyo
+    # cooldown: 公開から指定日数が経っていないバージョンには更新しない。
+    # なぜ: npm パッケージの乗っ取り（悪意ある版の公開）は、多くが数日以内に発見・削除される。
+    #       少し待つだけで、その種のサプライチェーン攻撃の大半を避けられる。
+    #       セキュリティ更新には適用されない（脆弱性修正は待たずに届く）。
+    cooldown:
+      default-days: 7
+    # 同時に開いておける PR 数の上限。多すぎるとレビューが追いつかない。
+    open-pull-requests-limit: 10
+    # Conventional Commits に合わせる。include: scope で
+    #   本番依存 → "chore(deps): ..." / 開発依存 → "chore(deps-dev): ..." になる。
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    # labels を指定しないのは意図的。既定の "dependencies" + "javascript" ラベルが自動作成・付与される
+    # （独自ラベルを指定すると、リポジトリに存在しないラベルは黙って無視されるため）。
+    groups:
+      # 開発依存（lint / test / 型定義など）の minor・patch は 1 PR にまとめる。
+      npm-development:
+        dependency-type: development
+        update-types: [minor, patch]
+      # 本番依存の minor・patch もまとめる。major はグループから外れ、個別 PR になる。
+      npm-production:
+        dependency-type: production
+        update-types: [minor, patch]
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions（ワークフローと composite action の uses: を更新する）
+  # SHA 固定した action も、末尾の "# vX.Y.Z" コメントと一緒に更新してくれる。
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: github-actions
+    # "/" は .github/workflows を指す。composite action は別ディレクトリなので明示的に追加する。
+    directories:
+      - /
+      - /.github/actions/*
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Tokyo
+    cooldown:
+      default-days: 7
+    commit-message:
+      # "ci(deps): bump actions/checkout ..." の形になる。
+      prefix: ci
+      include: scope
+    groups:
+      # action の更新は互いに独立していることが多く、まとめても困らない。PR を 1 本に集約する。
+      github-actions:
+        patterns: ['*']

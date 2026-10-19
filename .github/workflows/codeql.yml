@@ -1,0 +1,85 @@
+# =============================================================================
+# CodeQL: ソースコードの静的セキュリティ解析（SAST）
+# -----------------------------------------------------------------------------
+# 目的:
+#   SQL インジェクション・XSS・パストラバーサル・危険なワークフロー記述などの脆弱性を、
+#   レビューでは見落としやすいデータフローまで追って自動検出する。
+#   結果は Security タブ > Code scanning に表示され、PR には差分の指摘がコメントされる。
+# なぜ「default setup」ではなくこのファイル（advanced setup）なのか:
+#   - 設定がコードとしてレビュー・履歴管理できる（誰がいつクエリを変えたか追える）
+#   - 対象言語・クエリスイート・スケジュールを明示的に制御できる
+#   注意: リポジトリ設定で default setup が有効だと、このワークフローの結果アップロードが失敗する。
+#         Settings > Code security > CodeQL analysis を「Advanced」にしておくこと。
+# コスト:
+#   public リポジトリは無料。private は GitHub Code Security（有償）が必要。
+# 実行主体: GitHub Actions（ランナー上で CodeQL を実行）。結果は GitHub の Code scanning が受け取る。Copilot は関与しない。
+# =============================================================================
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # 週 1 回の定期スキャン。
+  # なぜ: コードが変わらなくても CodeQL のクエリは更新され、新しい脆弱性パターンが追加されるため。
+  # 時刻は UTC。毎時 0 分は GitHub 全体で混雑し遅延しやすいので、半端な分を指定する（月曜 12:27 JST）。
+  schedule:
+    - cron: '27 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # 解析結果（SARIF）を Code scanning にアップロードするために必要な唯一の書き込み権限。
+      security-events: write
+      # private リポジトリでワークフローの実行情報を参照するために必要（public では無害）。
+      actions: read
+    strategy:
+      # 1 言語の解析が失敗しても、他の言語の結果は出し切る。
+      fail-fast: false
+      matrix:
+        include:
+          # build-mode: none = ビルドせずにソースを直接解析する。
+          # JS/TS や Python などインタプリタ系言語はこれで十分。
+          # Java / C# / C++ / Go 等のコンパイル言語は autobuild または manual に変える。
+          - language: javascript-typescript
+            build-mode: none
+          # GitHub Actions のワークフロー自体も解析する。
+          # pull_request_target での危険なチェックアウトや、
+          # ${{ }} 展開によるスクリプトインジェクションなど CI 特有の脆弱性を検出できる。
+          - language: actions
+            build-mode: none
+          # 他プロジェクトへの応用: python / go / java-kotlin / csharp / ruby / swift / c-cpp を追加する。
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # security-extended: 既定（default）より検出範囲が広いクエリスイート。
+          # 誤検知はやや増えるが、公開アプリでは見逃しのコストの方が高いため採用する。
+          # さらに保守性の指摘まで欲しければ security-and-quality にする。
+          queries: security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          # 言語ごとに結果を区別して保存するためのカテゴリ（matrix で上書きし合わないように）。
+          category: '/language:${{ matrix.language }}'

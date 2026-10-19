@@ -1,0 +1,40 @@
+# =============================================================================
+# Labeler: 変更されたパス・ブランチ名から PR に自動でラベルを付ける
+# -----------------------------------------------------------------------------
+# 目的:
+#   PR 一覧で「どの領域の変更か」を一目で分かるようにし、
+#   レビュアーの割り当て・検索・リリースノートの分類（.github/release.yml）に使う。
+# ルールの定義は .github/labeler.yml。
+# 実行主体: GitHub Actions（actions/labeler が .github/labeler.yml を読んでラベルを付ける）。Copilot は関与しない。
+# =============================================================================
+name: Labeler
+
+on:
+  # ⚠ pull_request_target は「base ブランチ（main）のワークフロー定義」で、書き込み権限付きで動く。
+  # fork からの PR にもラベルを付けるには必要（pull_request では fork PR のトークンが読み取り専用になる）。
+  # その代わり、このワークフローでは PR のコードを絶対に checkout / 実行してはならない。
+  # 攻撃者が PR に仕込んだコードが書き込み権限付きで動いてしまう（"pwn request" と呼ばれる攻撃）。
+  # actions/labeler は変更ファイル一覧を API で取得するだけなので安全。
+  # zizmor の dangerous-triggers 指摘は、この理由で .github/zizmor.yml にて許容している。
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  label:
+    name: label
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # .github/labeler.yml を読むため。
+      contents: read
+      # ラベルを付け外しするため。
+      pull-requests: write
+    steps:
+      - name: Apply labels
+        uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
+        with:
+          # 変更が取り消されて条件に合わなくなったラベルは外す（付けっぱなしで誤解を生まないように）。
+          # labeler.yml に定義されていない手動ラベルは外されない。
+          sync-labels: true

@@ -1,0 +1,62 @@
+# =============================================================================
+# Copilot Setup Steps: Copilot cloud agent / Copilot code review の作業環境を準備する
+# -----------------------------------------------------------------------------
+# 目的:
+#   Copilot が Issue から PR を作る（cloud agent）、または PR をレビューするとき、
+#   作業開始前にこのジョブのステップが実行される。依存やツールを事前に入れておくことで、
+#   Copilot が試行錯誤でインストールする時間を省き、テストや lint を確実に実行できるようにする。
+# 仕様上の制約（公式ドキュメントより）:
+#   - ファイル名は .github/workflows/copilot-setup-steps.yml 固定
+#   - ジョブ名は copilot-setup-steps 固定（違う名前だと Copilot に認識されない）
+#   - Copilot が読むのはこのジョブの steps / permissions / runs-on / services / snapshot /
+#     timeout-minutes（最大 59）だけ。それ以外の設定は無視される
+#   - default ブランチにマージされて初めて有効になる
+# なぜ CI と同じ composite action を使うのか:
+#   「CI で通る環境」と「Copilot が作業する環境」を一致させるため。
+#   ずれていると、Copilot が CI で落ちる PR を作ってしまう。
+# 実行主体: 形式は Actions のワークフローで、Actions のランナー上で動く。ただし通常の CI と違い、Copilot cloud agent / Copilot code review が作業開始時に自動で起動する（下記の on: は動作確認用）。
+# =============================================================================
+name: Copilot Setup Steps
+
+on:
+  # 手動実行で、このセットアップが壊れていないかを Actions タブから確認できる。
+  workflow_dispatch:
+  # このファイルや共通セットアップを変更した PR で、通常のワークフローとして動作確認する。
+  # （必須チェックではないので、パス条件で絞っても問題ない）
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+      - .github/actions/setup/**
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+      - .github/actions/setup/**
+
+permissions:
+  contents: read
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # このジョブに必要なのは依存の取得だけなので、最小権限として読み取りのみにする（公式の例も contents: read）。
+    permissions:
+      contents: read
+    steps:
+      # Copilot は後でコミットを積むため、ここでは persist-credentials を既定のままにする
+      # （このトークンは contents: read のみなので、漏れても書き込みはできない）。
+      # fetch-depth は Copilot 側で上書きされるので指定しない。
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # `./` を使う理由は ci.yml のコメント参照。
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      # プロジェクト固有: Prisma Client は生成物で .gitignore 対象のため、事前に生成しておく。
+      # これが無いと Copilot が型エラーの原因調査に時間を使ってしまう。
+      # 他プロジェクトへの応用: コード生成・DB マイグレーション・ブラウザのインストール
+      # （例: pnpm exec playwright install --with-deps）など、作業前に必要な準備をここに書く。
+      - name: Generate Prisma Client
+        run: pnpm --filter @claude-study/db db:generate

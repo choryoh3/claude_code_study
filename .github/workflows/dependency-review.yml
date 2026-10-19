@@ -1,0 +1,58 @@
+# =============================================================================
+# Dependency Review: PR で追加・更新される依存関係の審査
+# -----------------------------------------------------------------------------
+# 目的:
+#   既知の脆弱性を持つパッケージや、ライセンス上問題のあるパッケージが
+#   「マージされる前に」PR の段階でブロックする。
+# Dependabot との役割分担:
+#   - Dependabot alerts : すでに main に入っている依存の脆弱性を「事後」に知らせる
+#   - Dependency Review : これから入る依存を「事前」に止める（このワークフロー）
+# 前提:
+#   Settings > Code security で Dependency graph を有効にする（public は既定で有効）。
+#   private リポジトリでは GitHub Code Security（有償）が必要。
+# 実行主体: GitHub Actions（ランナー上で実行。依存グラフは GitHub 本体の機能が提供）。Copilot は関与しない。
+# =============================================================================
+name: Dependency Review
+
+on:
+  # lockfile / マニフェストの差分を base と head で比較するため、PR イベント専用。
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: dependency-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # 依存グラフの差分を API で取得する。
+      contents: read
+      # 問題があったときに PR へ結果をコメントするため（comment-summary-in-pr）。
+      pull-requests: write
+    steps:
+      # checkout は不要。差分は GitHub API（dependency graph）から取得するため、
+      # PR のコードをランナーに展開しない分だけ攻撃面も小さくなる。
+      - name: Dependency Review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # moderate 以上の既知脆弱性を含む依存の追加をブロックする。
+          # low まで止めると開発が頻繁に止まり、形骸化して無視されがちになるため moderate を採用。
+          fail-on-severity: moderate
+          # ネットワーク越しに使われる場合もソース公開義務が生じる強いコピーレフトだけを拒否する。
+          # 公開 Web アプリでは利用形態によって自社コードの公開義務が発生し得るため。
+          # 他プロジェクトへの応用: 法務方針に合わせて変更する。
+          #   より厳格にするなら allow-licenses（許可リスト方式）に切り替える（両方の同時指定は不可）。
+          deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0
+          # 失敗したときだけ PR にコメントする（成功時のノイズを避ける）。
+          comment-summary-in-pr: on-failure
+          # 追加される依存の OpenSSF Scorecard（メンテ状況やセキュリティ慣行の点数）を表示する。
+          # ブロックはせず、レビュー時の判断材料として出す。
+          show-openssf-scorecard: true
+          # 脆弱性が修正されたバージョンを併記し、対応方法を分かりやすくする。
+          show-patched-versions: true

@@ -44,9 +44,8 @@
   grid-template-columns: repeat(5, 1fr);
   height: var(--tabbar-height);
   padding-bottom: env(safe-area-inset-bottom);
-  background: var(--glass);
-  backdrop-filter: saturate(1.6) blur(14px);
-  -webkit-backdrop-filter: saturate(1.6) blur(14px);
+  /* 半透明（glass）だと、下のコンテンツの色が透けて、ラベルのコントラストが基準(4.5:1)を下回る */
+  background: var(--bg-elevated);
   border-top: 1px solid var(--border);
 }
 

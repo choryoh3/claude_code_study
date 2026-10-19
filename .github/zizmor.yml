@@ -1,0 +1,33 @@
+# =============================================================================
+# zizmor の設定（.github/workflows/workflow-lint.yml から自動検出される）
+# -----------------------------------------------------------------------------
+# 方針:
+#   監査（audit）そのものは無効化しない。無効化すると、将来同じ種類の本物の問題が
+#   入っても検出されなくなるため。意図して許容する箇所だけを「ファイル単位で」除外し、
+#   その理由をここに必ず書く。除外を追加する PR は、理由の妥当性をレビューすること。
+# 読む主体: workflow-lint.yml が実行する zizmor（GitHub Actions 上）。それ自体は実行されない設定データ。
+# =============================================================================
+rules:
+  # pull_request_target は fork PR のコードを書き込み権限付きで実行し得る危険なトリガー。
+  # labeler.yml は PR のコードを checkout も実行もせず、API で変更ファイル一覧を取得するだけなので許容する。
+  # → labeler.yml に checkout や run を追加する場合は、この除外を見直すこと。
+  dangerous-triggers:
+    ignore:
+      - labeler.yml
+
+  # checkout が GITHUB_TOKEN を .git/config に残す件。
+  # Copilot は作業結果をコミットするため、copilot-setup-steps では既定動作を変えない。
+  # トークンは contents: read のみで、漏れても書き込みには使えない。
+  artipacked:
+    ignore:
+      - copilot-setup-steps.yml
+
+  # GitHub は 2026-07-30 に self-repository 構文（uses: $/.github/actions/xxx）を導入し、推奨している。
+  # `$/` は「実行中のコミットのこのリポジトリ」を指すため、checkout の内容に左右されない。
+  # しかし actionlint 1.7.12 はこの構文を「ref が無い不正な形式」としてエラーにする
+  # （対応 PR: rhysd/actionlint#732 が未マージ）。両方の lint を通すため、当面は従来の `./` を使う。
+  # → actionlint が `$/` に対応したら、`./` を `$/` に置き換えてこの除外を削除すること。
+  self-repository:
+    ignore:
+      - ci.yml
+      - copilot-setup-steps.yml

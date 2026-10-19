@@ -20,6 +20,11 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.node } },
   },
   {
+    // E2E は Node で動くが、page.evaluate の中身はブラウザ上で動くため、ブラウザのグローバル（document など）も使う
+    files: ['e2e/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
