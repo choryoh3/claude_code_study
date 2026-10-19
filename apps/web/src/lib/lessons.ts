@@ -1,5 +1,4 @@
 import {
-  LEVEL_LABELS,
   PLANNED_TOPICS,
   loadReference,
   loadLessons,
@@ -44,8 +43,6 @@ export function toSummary(l: Lesson): LessonSummary {
 
 export interface LevelGroup {
   level: Level;
-  name: string;
-  tagline: string;
   lessons: LessonSummary[];
   planned: PlannedTopic[];
 }
@@ -61,7 +58,6 @@ export function getLevelGroups(): LevelGroup[] {
       level === 'basic' ? [] : PLANNED_TOPICS[level].filter((t) => !published.has(t.slug));
     return {
       level,
-      ...LEVEL_LABELS[level],
       lessons: all.filter((l) => l.level === level),
       planned,
     };

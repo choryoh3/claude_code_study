@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight, Check, Copy, Search, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { matches } from '@/lib/palette-logic';
@@ -24,6 +25,7 @@ interface Props {
 }
 
 function CopyButton({ text }: { text: string }) {
+  const t = useTranslations('reference');
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -43,7 +45,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       className={styles.copy}
       onClick={copy}
-      aria-label={copied ? `${text} をコピーしました` : `${text} をコピー`}
+      aria-label={copied ? t('copied', { text }) : t('copy', { text })}
       data-copied={copied || undefined}
     >
       {copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
@@ -52,6 +54,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export function ReferenceView({ sections, variant, searchLabel }: Props) {
+  const t = useTranslations('reference');
   const [query, setQuery] = useState('');
   const q = query.trim();
 
@@ -83,7 +86,7 @@ export function ReferenceView({ sections, variant, searchLabel }: Props) {
               type="button"
               className={styles.clear}
               onClick={() => setQuery('')}
-              aria-label="検索をクリア"
+              aria-label={t('clearSearch')}
             >
               <X size={16} aria-hidden="true" />
             </button>
@@ -91,15 +94,11 @@ export function ReferenceView({ sections, variant, searchLabel }: Props) {
         </div>
         <p className={styles.count} role="status" aria-live="polite">
           {q
-            ? `${total} 件が見つかりました`
-            : `全 ${sections.reduce((n, s) => n + s.items.length, 0)} 件`}
+            ? t('found', { count: total })
+            : t('total', { count: sections.reduce((n, s) => n + s.items.length, 0) })}
         </p>
 
-        {visible.length === 0 && (
-          <p className={styles.empty}>
-            「{q}」に一致する項目はありません。別の言葉でお試しください。
-          </p>
-        )}
+        {visible.length === 0 && <p className={styles.empty}>{t('empty', { query: q })}</p>}
 
         {visible.map((section) => (
           <section
@@ -131,8 +130,8 @@ export function ReferenceView({ sections, variant, searchLabel }: Props) {
       </div>
 
       {sections.length > 1 && (
-        <nav className={styles.toc} aria-label="セクション">
-          <h2>セクション</h2>
+        <nav className={styles.toc} aria-label={t('sections')}>
+          <h2>{t('sections')}</h2>
           <ol>
             {sections.map((s) => (
               <li key={s.id}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, Copy } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { isValidElement, useRef, useState, type ReactNode } from 'react';
 import styles from './code-block.module.css';
 
@@ -35,6 +36,7 @@ const LANG_LABEL: Record<string, string> = {
 };
 
 export function CodeBlock({ children }: { children?: ReactNode }) {
+  const t = useTranslations('codeBlock');
   const { lang, text } = extract(children);
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -67,7 +69,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
           data-copied={copied || undefined}
         >
           {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-          {copied ? 'コピーしました' : 'コピー'}
+          {copied ? t('copied') : t('copy')}
         </button>
       </figcaption>
       <pre className={styles.pre} tabIndex={0}>
@@ -75,7 +77,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
       </pre>
       {/* スクリーンリーダーにコピー結果を伝える */}
       <span className="sr-only" role="status" aria-live="polite">
-        {copied ? 'コードをコピーしました' : ''}
+        {copied ? t('copiedSr') : ''}
       </span>
     </figure>
   );

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const config: NextConfig = {
   // workspace パッケージは TypeScript のソースをそのまま公開しているため、Next側で変換する
@@ -8,4 +9,7 @@ const config: NextConfig = {
   poweredByHeader: false,
 };
 
-export default config;
+// i18n/request.ts を next-intl に結びつける（文言は messages/<locale>.json に集約）
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+export default withNextIntl(config);

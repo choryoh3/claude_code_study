@@ -1,13 +1,13 @@
 'use client';
 
 import { Moon, Sun, SunMoon, type LucideIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useSyncExternalStore } from 'react';
 import styles from './theme-toggle.module.css';
 
 type Theme = 'system' | 'light' | 'dark';
 const KEY = 'claude-study:theme';
 const ORDER: Theme[] = ['system', 'light', 'dark'];
-const LABEL: Record<Theme, string> = { system: '自動', light: 'ライト', dark: 'ダーク' };
 const ICON: Record<Theme, LucideIcon> = { system: SunMoon, light: Sun, dark: Moon };
 
 const listeners = new Set<() => void>();
@@ -39,6 +39,7 @@ function apply(theme: Theme) {
 }
 
 export function ThemeToggle() {
+  const t = useTranslations('theme');
   const theme = useSyncExternalStore(subscribe, readTheme, () => 'system' as Theme);
   const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length] ?? 'system';
   const Icon = ICON[theme];
@@ -48,11 +49,11 @@ export function ThemeToggle() {
       type="button"
       className={styles.button}
       onClick={() => apply(next)}
-      aria-label={`テーマを切り替える（現在: ${LABEL[theme]}、次: ${LABEL[next]}）`}
-      title={`テーマ: ${LABEL[theme]}`}
+      aria-label={t('toggle', { current: t(`modes.${theme}`), next: t(`modes.${next}`) })}
+      title={t('title', { current: t(`modes.${theme}`) })}
     >
       <Icon size={18} aria-hidden="true" />
-      <span className={styles.label}>{LABEL[theme]}</span>
+      <span className={styles.label}>{t(`modes.${theme}`)}</span>
     </button>
   );
 }

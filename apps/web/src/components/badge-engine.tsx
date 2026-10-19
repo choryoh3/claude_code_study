@@ -1,6 +1,7 @@
 'use client';
 
-import { BADGE_DEFINITIONS, type BadgeKey, type Level } from '@claude-study/schemas';
+import type { BadgeKey, Level } from '@claude-study/schemas';
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { BADGE_ICONS } from '@/lib/badge-meta';
 import { missingBadges, toLocalDate } from '@/lib/progress-logic';
@@ -18,6 +19,8 @@ export function BadgeEngine({
 }: {
   lessons: ReadonlyArray<{ slug: string; level: Level }>;
 }) {
+  const t = useTranslations('badges');
+  const tCommon = useTranslations('common');
   const progress = useProgress();
   const [queue, setQueue] = useState<BadgeKey[]>([]);
 
@@ -35,25 +38,27 @@ export function BadgeEngine({
     return () => clearTimeout(t);
   }, [current]);
 
-  const def = BADGE_DEFINITIONS.find((b) => b.key === current);
   const Icon = current ? BADGE_ICONS[current] : undefined;
   return (
     <div className={styles.region} role="status" aria-live="polite" aria-atomic="true">
-      {current && def && Icon && (
+      {current && Icon && (
         <div key={current} className={styles.toast}>
           <span className={styles.icon} aria-hidden="true">
             <Icon size={24} strokeWidth={2} />
           </span>
           <span className={styles.text}>
-            <strong>バッジを獲得しました</strong>
+            <strong>{t('toastTitle')}</strong>
             <span>
-              {def.title}：{def.description}
+              {t('toastItem', {
+                title: t(`items.${current}.title`),
+                description: t(`items.${current}.description`),
+              })}
             </span>
           </span>
           <button
             type="button"
             className={styles.close}
-            aria-label="閉じる"
+            aria-label={tCommon('close')}
             onClick={() => setQueue((q) => q.slice(1))}
           >
             ×

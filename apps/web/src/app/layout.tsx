@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { BadgeEngine } from '@/components/badge-engine';
 import { CommandPalette } from '@/components/command-palette';
@@ -9,14 +11,13 @@ import { getLessonLinks, getLessons, getReference } from '@/lib/lessons';
 import type { ReferenceEntry } from '@/lib/palette-logic';
 import './globals.css';
 
-export const metadata: Metadata = {
-  title: {
-    default: 'Claude Code 学習ロードマップ',
-    template: '%s | Claude Code 学習ロードマップ',
-  },
-  description:
-    'Claude Codeを基礎から上級まで、読んで・試して・確認しながら身につける日本語の学習サイト。公式ドキュメントで確認した内容だけを扱います。',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('meta');
+  return {
+    title: { default: t('siteName'), template: `%s | ${t('siteName')}` },
+    description: t('siteDescription'),
+  };
+}
 
 export const viewport: Viewport = {
   colorScheme: 'light dark',
@@ -53,23 +54,27 @@ function buildReferenceEntries(): ReferenceEntry[] {
   ];
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getLocale();
+  const t = await getTranslations('common');
   const lessons = getLessons().map((l) => ({ slug: l.slug, level: l.level }));
   return (
-    <html lang="ja" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
-        <a className="skip-link" href="#main">
-          本文へスキップ
-        </a>
-        <SiteHeader />
-        <main id="main">{children}</main>
-        <SiteFooter />
-        <MobileTabBar />
-        <CommandPalette reference={buildReferenceEntries()} />
-        <BadgeEngine lessons={lessons} />
+        <NextIntlClientProvider>
+          <a className="skip-link" href="#main">
+            {t('skipToMain')}
+          </a>
+          <SiteHeader />
+          <main id="main">{children}</main>
+          <SiteFooter />
+          <MobileTabBar />
+          <CommandPalette reference={buildReferenceEntries()} />
+          <BadgeEngine lessons={lessons} />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

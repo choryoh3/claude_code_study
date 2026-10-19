@@ -1,0 +1,295 @@
+{
+  "meta": {
+    "siteName": "Claude Code 学習ロードマップ",
+    "siteDescription": "Claude Codeを基礎から上級まで、読んで・試して・確認しながら身につける日本語の学習サイト。公式ドキュメントで確認した内容だけを扱います。"
+  },
+  "common": {
+    "skipToMain": "本文へスキップ",
+    "close": "閉じる",
+    "loading": "読み込み中",
+    "comingSoon": "準備中"
+  },
+  "levels": {
+    "basic": {
+      "name": "基礎",
+      "tagline": "基本操作と、安全に任せる考え方"
+    },
+    "intermediate": {
+      "name": "中級",
+      "tagline": "設定と拡張で、自分仕様に育てる"
+    },
+    "advanced": {
+      "name": "上級",
+      "tagline": "並列化と自己検証で、チームの戦力にする"
+    }
+  },
+  "nav": {
+    "main": "メイン",
+    "mainBottom": "メイン（下部）",
+    "items": {
+      "roadmap": "ロードマップ",
+      "dashboard": "ダッシュボード",
+      "cheatsheet": "チートシート",
+      "glossary": "用語集",
+      "badges": "バッジ"
+    }
+  },
+  "header": {
+    "home": "Claude Code 学習ロードマップ ホーム",
+    "brand": "Claude Code 学習"
+  },
+  "theme": {
+    "toggle": "テーマを切り替える（現在: {current}、次: {next}）",
+    "title": "テーマ: {current}",
+    "modes": {
+      "system": "自動",
+      "light": "ライト",
+      "dark": "ダーク"
+    }
+  },
+  "footer": {
+    "source": "教材の内容は、Claude Code の<link>公式ドキュメント</link>で確認した日付を各レッスンに記載しています。仕様は変わることがあるため、最新は公式をご確認ください。",
+    "disclaimer": "非公式の学習サイトです。Anthropic とは関係ありません。"
+  },
+  "home": {
+    "eyebrow": "基礎から上級まで・日本語で学ぶ",
+    "title": "Claude Codeを、<accent>任せられる相棒</accent><nowrap>に育てる。</nowrap>",
+    "lead": "インストールから、並列実装・自己検証ループまで。読んで、試して、確認しながら、実務で使える形に身につけます。",
+    "ctaStart": "最初のレッスンをはじめる",
+    "ctaRoadmap": "ロードマップを見る",
+    "meta": "登録なしですぐに始められます。公開中のレッスン: {count}本",
+    "terminal": {
+      "welcome": "✻ Welcome to Claude Code",
+      "request": "認証のバグを直したい",
+      "reply": "● まず調査して、計画を提案します",
+      "note": "承認するまで、ファイルは変更しません"
+    },
+    "stepsTitle": "身につくまでの、4つのステップ",
+    "stepLabel": "STEP {number}",
+    "steps": {
+      "read": {
+        "title": "読む",
+        "body": "図解と短い解説で、まず全体像をつかむ。"
+      },
+      "try": {
+        "title": "試す",
+        "body": "コピーして実行できるハンズオンで、手を動かす。"
+      },
+      "check": {
+        "title": "確認する",
+        "body": "クイズで理解を確かめ、つまずきを見つける。"
+      },
+      "retain": {
+        "title": "定着する",
+        "body": "進捗・連続学習・バッジで、続ける力を支える。"
+      }
+    },
+    "levelsTitle": "3つのレベル",
+    "levelPublished": "{count}本公開中",
+    "levelPlanned": " ／ 今後 {count}本追加予定",
+    "comingSoon": "準備中"
+  },
+  "roadmap": {
+    "meta": {
+      "title": "ロードマップ",
+      "description": "基礎から上級まで、Claude Codeを身につける学習の道すじ。"
+    },
+    "heading": "学習ロードマップ",
+    "intro": "基礎から順に進めるのがおすすめです。完了したレッスンには印がつき、次にやることが1つだけ強調されます。",
+    "count": "{done} / {total} 完了",
+    "next": "次はここ",
+    "status": {
+      "completed": "完了",
+      "in_progress": "学習中",
+      "not_started": "未着手"
+    }
+  },
+  "dashboard": {
+    "meta": {
+      "title": "ダッシュボード",
+      "description": "学習の進み具合と、次にやることを確認できます。"
+    },
+    "heading": "ダッシュボード",
+    "overview": "全体の進捗",
+    "completed": "<big>{done}</big><small> / {total} レッスン完了</small>",
+    "streak": "{count}日連続で学習中",
+    "streakNone": "今日から連続記録をはじめましょう",
+    "badges": "獲得バッジ {count} / {total}",
+    "next": "次にやること",
+    "continue": "続きから学ぶ",
+    "start": "最初のレッスンをはじめる",
+    "allDone": "公開中のレッスンをすべて完了しました",
+    "allDoneNote": "新しいレッスンは順次追加されます。復習にはロードマップをご利用ください。",
+    "roadmapLink": "ロードマップを見る",
+    "levels": "レベル別の進み具合",
+    "levelProgress": "{level}の進捗",
+    "levelCount": "{done} / {total}",
+    "hint": "進捗はこのブラウザに保存されます。登録なしでそのまま続けられます。"
+  },
+  "progressRing": {
+    "aria": "{label}: {value} / {max}（{percent}%）"
+  },
+  "badges": {
+    "meta": {
+      "title": "バッジ",
+      "description": "学習の節目で獲得できるバッジの一覧です。"
+    },
+    "heading": "バッジ",
+    "intro": "学習の節目で獲得できます。",
+    "earnedCount": "獲得済み: <strong>{count}</strong> / {total}",
+    "earnedOn": "{date} に獲得",
+    "earnedSr": "獲得済み：",
+    "lockedSr": "未獲得：",
+    "toastTitle": "バッジを獲得しました",
+    "items": {
+      "first-lesson": {
+        "title": "はじめの一歩",
+        "description": "最初のレッスンを完了した",
+        "hint": "レッスンを1つ完了にする"
+      },
+      "basic-complete": {
+        "title": "基礎マスター",
+        "description": "基礎のレッスンをすべて完了した",
+        "hint": "基礎のレッスンをすべて完了にする"
+      },
+      "intermediate-complete": {
+        "title": "中級マスター",
+        "description": "中級のレッスンをすべて完了した",
+        "hint": "中級のレッスンをすべて完了にする"
+      },
+      "advanced-complete": {
+        "title": "上級マスター",
+        "description": "上級のレッスンをすべて完了した",
+        "hint": "上級のレッスンをすべて完了にする"
+      },
+      "quiz-perfect": {
+        "title": "全問正解",
+        "description": "クイズで満点を取った",
+        "hint": "いずれかのクイズで全問正解する"
+      },
+      "streak-3": {
+        "title": "3日連続",
+        "description": "3日連続で学習した",
+        "hint": "3日連続で、レッスンかクイズに取り組む"
+      },
+      "streak-7": {
+        "title": "7日連続",
+        "description": "7日連続で学習した",
+        "hint": "7日連続で、レッスンかクイズに取り組む"
+      }
+    },
+    "toastItem": "{title}：{description}"
+  },
+  "lesson": {
+    "notFoundTitle": "見つかりません",
+    "plannedTitle": "{title}（準備中）",
+    "plannedBody": "このレッスンは現在準備しています。公式ドキュメントで内容を確認しながら執筆するため、公開まで少しお待ちください。",
+    "backToRoadmap": "ロードマップに戻る",
+    "verified": "公式ドキュメントで確認した日:",
+    "chip": "{level}・{order}",
+    "pagerLabel": "前後のレッスン",
+    "prev": "前のレッスン",
+    "next": "次のレッスン",
+    "asideLabel": "このレッスンについて",
+    "tocLabel": "目次",
+    "tocTitle": "目次",
+    "tocQuiz": "クイズ",
+    "tableLabel": "表（横にスクロールできます）"
+  },
+  "lessonActions": {
+    "complete": "このレッスンを完了にする",
+    "done": "完了済み（クリックで戻す）",
+    "noteDone": "おつかれさまでした。次のレッスンへ進みましょう。",
+    "noteTodo": "内容を試し終えたら、完了にしましょう。"
+  },
+  "codeBlock": {
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "copiedSr": "コードをコピーしました"
+  },
+  "quiz": {
+    "title": "クイズ",
+    "best": "これまでの最高: <strong>{score}</strong> / {total}",
+    "intro": "理解できたかを、数問のクイズで確かめましょう。選択肢は毎回、並びが変わります。",
+    "start": "クイズに挑戦する",
+    "retry": "もう一度挑戦する",
+    "retryAfterError": "もう一度試す",
+    "loading": "読み込み中…",
+    "grade": "採点する",
+    "grading": "採点中…",
+    "remaining": "あと {count} 問、選んでください。",
+    "perfect": "全問正解です！",
+    "score": "{total}問中 {score}問 正解",
+    "correctSr": "正解：",
+    "incorrectSr": "不正解：",
+    "yourAnswer": "あなたの答え: {answer}",
+    "correctAnswer": "正解: {answer}",
+    "errors": {
+      "notFound": "このレッスンのクイズが見つかりませんでした。",
+      "rateLimited": "短時間にリクエストが集中しました。少し待ってから、もう一度お試しください。",
+      "loadFailed": "クイズを読み込めませんでした。",
+      "gradeFailed": "採点できませんでした。もう一度お試しください。",
+      "network": "通信に失敗しました。接続を確認して、もう一度お試しください。"
+    }
+  },
+  "palette": {
+    "groups": {
+      "page": "ページ",
+      "lesson": "レッスン",
+      "reference": "チートシート・用語集"
+    },
+    "dialog": "検索",
+    "placeholder": "レッスン・コマンド・用語を検索",
+    "results": "検索結果",
+    "noResults": "「{query}」に一致するものが見つかりませんでした。",
+    "searchFailed": "レッスンの検索に失敗しました。ページとチートシートは検索できます。",
+    "hintSelect": "選択",
+    "hintOpen": "開く",
+    "brand": "学習ロードマップ",
+    "open": "検索を開く（Ctrl+K または ⌘K）",
+    "trigger": "検索",
+    "triggerKey": "Ctrl K"
+  },
+  "reference": {
+    "copy": "{text} をコピー",
+    "copied": "{text} をコピーしました",
+    "clearSearch": "検索をクリア",
+    "found": "{count} 件が見つかりました",
+    "total": "全 {count} 件",
+    "empty": "「{query}」に一致する項目はありません。別の言葉でお試しください。",
+    "sections": "セクション",
+    "fallbackLesson": "レッスン",
+    "cheatsheet": {
+      "meta": {
+        "title": "チートシート",
+        "description": "スラッシュコマンド・キー操作・権限モードなど、Claude Codeでよく使う操作の早見表。"
+      },
+      "heading": "チートシート",
+      "lead": "よく使う操作の早見表です。コマンドはコピーでき、詳しい解説はレッスンで読めます。",
+      "search": "コマンド・キー・説明を絞り込む"
+    },
+    "glossary": {
+      "meta": {
+        "title": "用語集",
+        "description": "Claude Codeの学習で出てくる用語を、学ぶ順にまとめた用語集。"
+      },
+      "heading": "用語集",
+      "lead": "レッスンで出てくる用語を、学ぶ順に並べています。",
+      "search": "用語・説明を絞り込む",
+      "section": "用語"
+    }
+  },
+  "states": {
+    "error": {
+      "title": "表示中に問題が起きました",
+      "body": "一時的な問題かもしれません。もう一度試しても直らない場合は、少し時間をおいてお試しください。",
+      "retry": "もう一度試す"
+    },
+    "notFound": {
+      "title": "ページが見つかりません",
+      "body": "URLが変わったか、まだ公開されていないページです。ロードマップから探してみてください。",
+      "roadmap": "ロードマップへ",
+      "home": "トップへ"
+    }
+  }
+}

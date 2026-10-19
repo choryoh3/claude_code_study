@@ -2,6 +2,7 @@
 
 import type { GradeResult } from '@claude-study/schemas';
 import { Check, PartyPopper, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api-client';
 import {
@@ -15,18 +16,19 @@ import styles from './quiz-panel.module.css';
 
 type Phase = 'idle' | 'loading' | 'answering' | 'grading' | 'result' | 'error';
 
-const ERROR_MESSAGES: Record<number, string> = {
-  404: 'このレッスンのクイズが見つかりませんでした。',
-  429: '短時間にリクエストが集中しました。少し待ってから、もう一度お試しください。',
-};
+/** エラーは文言ではなく「種類」で持ち、表示のときに辞書から引く（言語を切り替えても対応できる） */
+type ErrorKey = 'notFound' | 'rateLimited' | 'loadFailed' | 'gradeFailed' | 'network';
+
+const STATUS_ERRORS: Record<number, ErrorKey> = { 404: 'notFound', 429: 'rateLimited' };
 
 export function QuizPanel({ slug }: { slug: string }) {
+  const t = useTranslations('quiz');
   const best = useProgress().quiz[slug];
   const [phase, setPhase] = useState<Phase>('idle');
   const [questions, setQuestions] = useState<DisplayQuestion[]>([]);
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [result, setResult] = useState<GradeResult | null>(null);
-  const [error, setError] = useState('');
+  const [errorKey, setErrorKey] = useState<ErrorKey | null>(null);
   const resultRef = useRef<HTMLHeadingElement>(null);
 
   // 採点結果が出たら、見出しにフォーカスを移して、スクリーンリーダーにも結果を伝える
@@ -36,11 +38,11 @@ export function QuizPanel({ slug }: { slug: string }) {
 
   async function start() {
     setPhase('loading');
-    setError('');
+    setErrorKey(null);
     try {
       const res = await api.api.quiz[':slug'].$get({ param: { slug } });
       if (res.status !== 200) {
-        setError(ERROR_MESSAGES[res.status] ?? 'クイズを読み込めませんでした。');
+        setErrorKey(STATUS_ERRORS[res.status] ?? 'loadFailed');
         setPhase('error');
         return;
       }
@@ -50,7 +52,7 @@ export function QuizPanel({ slug }: { slug: string }) {
       setResult(null);
       setPhase('answering');
     } catch {
-      setError('通信に失敗しました。接続を確認して、もう一度お試しください。');
+      setErrorKey('network');
       setPhase('error');
     }
   }
@@ -63,7 +65,7 @@ export function QuizPanel({ slug }: { slug: string }) {
         json: buildGradeRequest(questions, selected),
       });
       if (res.status !== 200) {
-        setError(ERROR_MESSAGES[res.status] ?? '採点できませんでした。もう一度お試しください。');
+        setErrorKey(STATUS_ERRORS[res.status] ?? 'gradeFailed');
         setPhase('error');
         return;
       }
@@ -72,7 +74,7 @@ export function QuizPanel({ slug }: { slug: string }) {
       recordQuizResult(slug, graded.score, graded.total);
       setPhase('result');
     } catch {
-      setError('通信に失敗しました。接続を確認して、もう一度お試しください。');
+      setErrorKey('network');
       setPhase('error');
     }
   }
@@ -83,29 +85,33 @@ export function QuizPanel({ slug }: { slug: string }) {
   return (
     <section className={styles.panel} aria-labelledby="quiz" id="quiz-section">
       <header className={styles.head}>
-        <h2 id="quiz">クイズ</h2>
+        <h2 id="quiz">{t('title')}</h2>
         {best && (
           <p className={styles.best}>
-            これまでの最高: <strong>{best.score}</strong> / {best.total}
+            {t.rich('best', {
+              score: best.score,
+              total: best.total,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
         )}
       </header>
 
       {(phase === 'idle' || phase === 'error') && (
         <div className={styles.intro}>
-          <p>理解できたかを、数問のクイズで確かめましょう。選択肢は毎回、並びが変わります。</p>
-          {phase === 'error' && (
+          <p>{t('intro')}</p>
+          {phase === 'error' && errorKey && (
             <p className={styles.error} role="alert">
-              {error}
+              {t(`errors.${errorKey}`)}
             </p>
           )}
           <button type="button" className="btn btn-primary" onClick={start}>
-            {phase === 'error' ? 'もう一度試す' : best ? 'もう一度挑戦する' : 'クイズに挑戦する'}
+            {phase === 'error' ? t('retryAfterError') : best ? t('retry') : t('start')}
           </button>
         </div>
       )}
 
-      {busy && phase === 'loading' && <p role="status">読み込み中…</p>}
+      {busy && phase === 'loading' && <p role="status">{t('loading')}</p>}
 
       {(phase === 'answering' || phase === 'grading') && (
         <form
@@ -142,9 +148,9 @@ export function QuizPanel({ slug }: { slug: string }) {
           </ol>
           <div className={styles.actions}>
             <button type="submit" className="btn btn-primary" disabled={remaining > 0 || busy}>
-              {phase === 'grading' ? '採点中…' : '採点する'}
+              {phase === 'grading' ? t('grading') : t('grade')}
             </button>
-            {remaining > 0 && <p className={styles.hint}>あと {remaining} 問、選んでください。</p>}
+            {remaining > 0 && <p className={styles.hint}>{t('remaining', { count: remaining })}</p>}
           </div>
         </form>
       )}
@@ -156,8 +162,8 @@ export function QuizPanel({ slug }: { slug: string }) {
               <PartyPopper size={24} aria-hidden="true" className={styles.party} />
             )}
             {result.score === result.total
-              ? '全問正解です！'
-              : `${result.total}問中 ${result.score}問 正解`}
+              ? t('perfect')
+              : t('score', { total: result.total, score: result.score })}
           </h3>
           <ol className={styles.questions}>
             {questions.map((q, qi) => {
@@ -175,21 +181,23 @@ export function QuizPanel({ slug }: { slug: string }) {
                         <X size={18} strokeWidth={3} />
                       )}
                     </span>
-                    <span className="sr-only">{r.correct ? '正解' : '不正解'}：</span>
+                    <span className="sr-only">{r.correct ? t('correctSr') : t('incorrectSr')}</span>
                     <span className={styles.qno}>Q{qi + 1}</span>
                     {q.prompt}
                   </p>
                   {!r.correct && chosen && (
-                    <p className={styles.yours}>あなたの答え: {chosen.label}</p>
+                    <p className={styles.yours}>{t('yourAnswer', { answer: chosen.label })}</p>
                   )}
-                  <p className={styles.correct}>正解: {correctLabel}</p>
+                  <p className={styles.correct}>
+                    {t('correctAnswer', { answer: correctLabel ?? '' })}
+                  </p>
                   <p className={styles.explain}>{r.explanation}</p>
                 </li>
               );
             })}
           </ol>
           <button type="button" className="btn btn-ghost" onClick={start}>
-            もう一度挑戦する
+            {t('retry')}
           </button>
         </div>
       )}

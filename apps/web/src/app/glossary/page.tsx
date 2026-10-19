@@ -1,34 +1,37 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { ReferenceView } from '@/components/reference-view';
 import { getLessonLinks, getReference } from '@/lib/lessons';
 import styles from '../reference-page.module.css';
 
-export const metadata: Metadata = {
-  title: '用語集',
-  description: 'Claude Codeの学習で出てくる用語を、学ぶ順にまとめた用語集。',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('reference.glossary.meta');
+  return { title: t('title'), description: t('description') };
+}
 
-export default function GlossaryPage() {
+export default async function GlossaryPage() {
+  const t = await getTranslations('reference');
   const { glossary } = getReference();
   const links = getLessonLinks();
+  const fallback = { title: t('fallbackLesson'), href: '/roadmap' };
 
   return (
     <div className="container">
       <header className={styles.head}>
-        <h1>用語集</h1>
-        <p>レッスンで出てくる用語を、学ぶ順に並べています。</p>
+        <h1>{t('glossary.heading')}</h1>
+        <p>{t('glossary.lead')}</p>
       </header>
       <ReferenceView
         variant="glossary"
-        searchLabel="用語・説明を絞り込む"
+        searchLabel={t('glossary.search')}
         sections={[
           {
             id: 'terms',
-            title: '用語',
-            items: glossary.terms.map((t) => ({
-              term: t.term,
-              description: t.description,
-              lesson: links[t.lesson] ?? { title: 'レッスン', href: '/roadmap' },
+            title: t('glossary.section'),
+            items: glossary.terms.map((term) => ({
+              term: term.term,
+              description: term.description,
+              lesson: links[term.lesson] ?? fallback,
             })),
           },
         ]}
