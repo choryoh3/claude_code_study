@@ -1,0 +1,232 @@
+---
+title: "MCPサーバーを自作する"
+level: advanced
+order: 4
+summary: "公式 TypeScript SDK でツールを 1 つ持つ最小の stdio サーバーを作り、claude mcp add で接続して動作を確認する。"
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: stdio で動く MCP サーバーのコードで、ログを出すときに避けるべきものはどれか。
+    choices:
+      - "`console.error()`"
+      - "`console.log()`"
+      - ファイルへのログ出力
+    answerIndex: 1
+    explanation: stdio のサーバーは、標準出力（stdout）で JSON-RPC メッセージをやり取りします。`console.log()` は stdout に書くため、メッセージが壊れてサーバーが動かなくなります。ログは stderr（`console.error()`）かファイルに出します。
+  - id: q2
+    prompt: "`claude mcp add` で stdio サーバーを登録するとき、`--` の役割はどれか。"
+    choices:
+      - サーバーを登録せず、一時的に起動するだけにする
+      - Claude Code のオプションと、サーバーを起動するコマンドを区切る
+      - サーバーのログを標準エラーに出す
+    answerIndex: 1
+    explanation: "`--` より前が Claude Code 側のオプション（`--transport`、`--env`、`--scope`）で、後ろがサーバーを起動するコマンドと引数です。区切らないと、サーバー自身のフラグが Claude Code のオプションとして解釈されてしまいます。"
+  - id: q3
+    prompt: "`hello` という名前で登録した MCP サーバーの `add` ツールは、Claude Code の中でどんな名前で扱われるか（権限ルールなどで使う名前）。"
+    choices:
+      - "`hello.add`"
+      - "`mcp_hello_add`"
+      - "`mcp__hello__add`"
+    answerIndex: 2
+    explanation: 公式では、MCP サーバーのツールは `mcp__<サーバー名>__<ツール名>` という名前になります。この名前は、権限ルール、subagent の `tools`、hooks の matcher で使います。
+  - id: q4
+    prompt: ビルド（`tsc`）をせずに登録だけして `claude mcp list` を見たら、接続に失敗していた。最も可能性が高い原因はどれか。
+    choices:
+      - "`build/index.js` がまだ存在せず、起動コマンドが失敗している"
+      - zod をインストールしたせいで MCP が使えなくなっている
+      - ツールの `description` を書いていないため接続が拒否される
+    answerIndex: 0
+    explanation: 登録したのは「`node build/index.js` を起動する」というコマンドなので、ビルド前はファイルがなく、起動に失敗します。公式チュートリアルも、ビルドは接続のために重要な手順だと強調しています。zod や description は接続の成否には関係しません。
+---
+
+## ゴール
+
+- MCP サーバーが何をするものか説明できる
+- 公式 TypeScript SDK で、ツールを 1 つ持つ stdio サーバーを作れる
+- `claude mcp add` で接続し、Claude Code から呼び出して確認できる
+
+## 前提
+
+- Node.js 20 以上と npm が使える（公式チュートリアルの要件）
+- 中級で、MCP サーバーを接続して使う経験がある
+- TypeScript の基本を知っている
+
+## 解説
+
+### MCP サーバーとは
+
+MCP（Model Context Protocol）は、AI アプリが外部のツールやデータと接続するための公式の規格です。サーバーは、主に次の 3 つの機能を提供できます。
+
+- ツール（Tools）: LLM が呼び出す関数
+- リソース（Resources）: ファイルのように読み込めるデータ
+- プロンプト（Prompts）: あらかじめ用意されたテンプレート
+
+このレッスンでは、いちばん使うことの多いツールだけを扱います。
+
+stdio（標準入出力）方式では、Claude Code がサーバーをサブプロセスとして起動し、標準入力と標準出力で JSON-RPC というメッセージ形式をやり取りします。そのため、標準出力にログを書いてはいけません。
+
+### 使う SDK の注意
+
+公式の TypeScript SDK のパッケージは、本レッスンの確認時点で `@modelcontextprotocol/server` です。旧版の v1 は `@modelcontextprotocol/sdk` という別のパッケージで、API が異なります。SDK は更新が続いているため、実際に作るときは公式のチュートリアル（https://modelcontextprotocol.io/docs/develop/build-server）の最新の記述を優先してください。
+
+また、公式のチュートリアルは `import { z } from "zod"` ですが、SDK の README には `zod/v4` から import する例もあります。型エラーが出たら、使っている zod のバージョンと公式の記述を照らしてください。
+
+### いつ自作するか
+
+- 社内の API やデータを、Claude から呼べるようにしたい
+- 既存の MCP サーバーでは足りない専用の操作がある
+
+単なる手順の共有なら skill、独立した役割なら subagent のほうが軽く済みます。MCP は、外部システムへの接続口が必要なときに選びます。
+
+### 作るときの設計上の注意
+
+- ツールの `description` と入力の `describe` は、Claude が使うかどうかを判断する材料になる。具体的に書く
+- 入力は zod で検証する。入力スキーマに範囲（最小・最大）を付ける
+- 出力が大きいと、コンテキストを圧迫する。公式は、MCP の出力が 10,000 トークンを超えると警告し、デフォルトの上限は 25,000 トークンだと説明している
+
+## ハンズオン
+
+1. プロジェクトを作り、依存パッケージを入れます。
+
+   ```bash
+   mkdir hello-mcp
+   cd hello-mcp
+   npm init -y
+   npm install @modelcontextprotocol/server zod
+   npm install -D @types/node typescript
+   mkdir src
+   ```
+
+2. `package.json` に、次の 2 つを追加します（既存の項目はそのまま）。
+
+   ```json
+   {
+     "type": "module",
+     "scripts": {
+       "build": "tsc"
+     }
+   }
+   ```
+
+3. `tsconfig.json` を作ります（公式チュートリアルの設定）。
+
+   ```json
+   {
+     "compilerOptions": {
+       "target": "ES2022",
+       "module": "Node16",
+       "moduleResolution": "Node16",
+       "types": ["node"],
+       "outDir": "./build",
+       "rootDir": "./src",
+       "strict": true,
+       "esModuleInterop": true,
+       "skipLibCheck": true,
+       "forceConsistentCasingInFileNames": true
+     },
+     "include": ["src/**/*"],
+     "exclude": ["node_modules"]
+   }
+   ```
+
+4. `src/index.ts` を作ります。公式チュートリアルの書き方（`McpServer`、`registerTool`、`serveStdio`）に沿った、ツール 1 つの最小構成です。
+
+   ```typescript
+   import { McpServer } from "@modelcontextprotocol/server";
+   import { serveStdio } from "@modelcontextprotocol/server/stdio";
+   import { z } from "zod";
+
+   // serveStdio は必要なたびにこの関数を呼ぶので、毎回新しいサーバーを返す
+   function createServer() {
+     const server = new McpServer({
+       name: "hello",
+       version: "1.0.0",
+     });
+
+     server.registerTool(
+       "add",
+       {
+         description: "Add two numbers and return the sum",
+         inputSchema: z.object({
+           a: z.number().describe("First number"),
+           b: z.number().describe("Second number"),
+         }),
+       },
+       async ({ a, b }) => {
+         return {
+           content: [{ type: "text", text: String(a + b) }],
+         };
+       },
+     );
+
+     return server;
+   }
+
+   serveStdio(createServer, {
+     onerror: (error) => console.error("hello MCP server error:", error),
+   });
+   console.error("hello MCP server running on stdio"); // stderr なら安全
+   ```
+
+5. ビルドします。
+
+   ```bash
+   npm run build
+   ```
+
+   期待される結果：エラーなく終わり、`build/index.js` ができます。
+
+6. Inspector で、サーバー単体の動作を確認します（公式チュートリアルの手順）。
+
+   ```bash
+   npx @modelcontextprotocol/inspector --cli node build/index.js --protocol-era modern --method tools/list
+   ```
+
+   期待される結果：`add` ツールが一覧に表示されます。公式によれば、Inspector のデフォルトは `legacy` なので、`--protocol-era legacy` でも一度確認します。
+
+7. Claude Code に登録します。パスは、自分の環境の絶対パスにしてください。
+
+   ```bash
+   claude mcp add --transport stdio hello -- node /absolute/path/to/hello-mcp/build/index.js
+   ```
+
+   期待される結果：`hello` が登録されます。デフォルトのスコープは `local` で、あなただけ・このプロジェクトだけで有効です。チームで共有するなら `--scope project` を付けると、`.mcp.json` に書かれます。
+
+8. 接続を確認します。
+
+   ```bash
+   claude mcp list
+   ```
+
+   期待される結果：`hello` がヘルスチェックの結果とともに表示されます。Claude Code の中では `/mcp` でも状態を確認できます。
+
+9. Claude Code を起動し、呼び出します。
+
+   ```text
+   hello サーバーの add ツールで、17 と 25 を足して
+   ```
+
+   期待される結果：ツール使用の許可を求められ、承認すると `42` が返ります。使うツール名は `mcp__hello__add` です。
+
+10. 後片付けをします。
+
+    ```bash
+    claude mcp remove hello
+    ```
+
+## よくある失敗
+
+- **接続に失敗する、またはツールが出ない**
+  原因：ビルドしていない、または起動コマンドのパスが相対パスで、起動場所が変わると見つからない。対処：`npm run build` を実行し、絶対パスで登録し直す。
+- **起動直後に壊れる・応答しない**
+  原因：サーバーのコードで `console.log()` を使い、標準出力に JSON-RPC 以外が混ざった。対処：`console.error()` かファイルに出力する。
+- **`--` を付け忘れて、サーバーのオプションが解釈される**
+  原因：Claude Code のオプションと、サーバーのコマンドの境目が不明になる。対処：`claude mcp add --transport stdio <name> -- <command> <args>` の形を守る。
+- **起動が遅くてタイムアウトする**
+  原因：サーバーの起動に時間がかかる。対処：公式では、起動のタイムアウトを環境変数 `MCP_TIMEOUT`（ミリ秒）で調整できる。ツールの実行時間は `MCP_TOOL_TIMEOUT` で調整する。
+- **SDK の API が古い記事と合わない**
+  原因：v1 の `@modelcontextprotocol/sdk` と、現行の `@modelcontextprotocol/server` で API が異なる。対処：インストールしたパッケージのバージョンと、公式の最新ドキュメントを照らす。
+
+## 次へ
+
+次は [CI 連携](/learn/advanced/ci-integration) です。ここまで作ったハーネスや skill を、GitHub Actions などの自動化の中で非対話に動かす方法を学びます。

@@ -1,0 +1,156 @@
+---
+title: gitワークフロー
+level: intermediate
+order: 7
+summary: Claude Code にコミットと PR を作らせる頼み方、差分と権限の確認ポイント、/rewind と git の役割の違いを学ぶ。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: Claude が Bash コマンドで行ったファイルの削除や移動を、/rewind で元に戻せるか。
+    choices:
+      - 戻せる。/rewind はすべてのファイル操作を記録している
+      - 戻せない。チェックポイントが追跡するのは Claude のファイル編集ツールによる変更だけで、Bash コマンドによる変更は対象外
+      - 戻せるが、conversation だけを選んだ場合に限る
+    answerIndex: 1
+    explanation: 公式は、rm や mv などの Bash コマンドによる変更は追跡されず、巻き戻しで元に戻せないと説明しています。こうした変更に備えて、git で commit しておくことが重要です。
+  - id: q2
+    prompt: 「チェックポイントがあるので git の commit は不要」という考えに対する正しい説明はどれか。
+    choices:
+      - 正しい。チェックポイントは git と同じく永続的な履歴になる
+      - 正しい。ただし 100 件を超えたら commit が必要になる
+      - 誤り。チェックポイントはセッション内の素早い復旧用で、永続的な履歴や共同作業には git などのバージョン管理を使う
+    answerIndex: 2
+    explanation: 公式は、チェックポイントを「セッション単位の復旧用」、git を「永続的な履歴と共同作業用」と位置づけています。チェックポイントは古いものが整理されることもあり、チームに共有もできません。
+  - id: q3
+    prompt: 「git diff・git log・git status・git commit だけを許可して、非対話でコミット文を作らせたい」。公式の例に沿った書き方はどれか。
+    choices:
+      - claude -p "..." --allowedTools "Bash(git diff *),Bash(git log *),Bash(git status *),Bash(git commit *)"
+      - claude -p "..." --allowedTools "Bash"
+      - claude -p "..." --allowedTools "git"
+    answerIndex: 0
+    explanation: --allowedTools は権限ルールの構文で、Bash(git diff *) のように末尾の空白とアスタリスクで前方一致を指定します。素の Bash はすべてのシェルコマンドを許可してしまい、範囲が広すぎます。
+  - id: q4
+    prompt: Claude が gh pr create で作った PR のセッションを、後から探す公式の方法はどれか。
+    choices:
+      - claude --from-pr 1234（自分の PR 番号）
+      - claude --pr-history
+      - git log --claude
+    answerIndex: 0
+    explanation: Claude が gh pr create や glab mr create で PR を作ると、セッションが PR に紐づき、claude --from-pr で絞り込んだセッション選択画面が開きます。他の 2 つは公式で確認できない名前です。
+---
+
+## ゴール
+
+- Claude Code に commit と PR を作らせる依頼を、確認ポイント付きで出せる
+- 差分の確認と権限の絞り込みで、意図しない操作を防げる
+- `/rewind`（チェックポイント）と git の役割の違いを説明できる
+
+## 前提
+
+- git の基本（`add`、`commit`、`branch`）を知っている
+- 練習用の git リポジトリがある。PR の手順には GitHub CLI（`gh`）のログインも必要
+
+## 解説
+
+### 依頼の仕方
+
+公式は、PR は「create a pr for my changes」のように直接頼むか、段階を踏んで頼めると説明しています。段階を踏むほうが確認しやすくなります。
+
+```text
+今の変更を要約して
+```
+
+```text
+コミットして。メッセージは Conventional Commits 形式（feat: や fix: で始める）で
+```
+
+```text
+create a pr
+```
+
+```text
+PR の説明に、変更のリスクと確認してほしい点を足して
+```
+
+コミットメッセージの規約があるなら CLAUDE.md に書いておくと毎回伝えずに済みます。このリポジトリも、CLAUDE.md で Conventional Commits を求めています。Claude Code 自身がコミットや PR に付ける定型文と衝突するときは、設定の `includeGitInstructions` と `attribution` で調整できます。
+
+### 確認すべき点
+
+1. 差分：コミット前に `git diff` や `git diff --staged` を自分で見る。PR は作る前に、Claude にリスクを列挙させる
+2. 権限：git コマンドは Bash ツールとして実行されるので、権限モードや許可ルールの設定によっては確認プロンプトが出ます。プロンプトでは実行されるコマンドを読んでから許可する。自動化するなら、必要なコマンドだけ許可する
+3. push や PR 作成：外部に影響する操作です。このリポジトリでは「GitHub への push は事前確認が必要」と CLAUDE.md で決めています
+4. 範囲：変更をステージする前に、関係ないファイルが混ざっていないか見る
+
+### チェックポイント（/rewind）と git の違い
+
+| | チェックポイント（`/rewind`） | git |
+| --- | --- | --- |
+| 単位 | 会話のプロンプトごと | 自分が作る commit |
+| 保存範囲 | Claude のファイル編集ツールによる変更 | 作業ツリー全体（commit したもの） |
+| 目的 | セッション内の素早い取り消し | 永続的な履歴・共同作業 |
+| 開き方 | `/rewind`、または入力欄が空のとき `Esc` を 2 回 | `git log`、`git revert` など |
+
+制限も公式に記載があります。Bash コマンドによるファイル変更、サブエージェントの多くの編集、Claude Code の外での手動変更は、巻き戻せません。復元の選択肢は、コードと会話の両方、会話だけ、コードだけです。結論として、節目では git で commit し、`/rewind` は試行錯誤の取り消し用と考えます。
+
+## ハンズオン
+
+練習用の git リポジトリで行います。push はしません。
+
+1. 作業用ブランチを作り、Claude を起動します。
+
+   ```bash
+   git switch -c practice/git-workflow
+   claude
+   ```
+
+2. 小さな変更を頼みます。
+
+   ```text
+   README.md の先頭に、このリポジトリの目的を1行で追記して
+   ```
+
+3. 変更をシェルで確認します（別のターミナルで実行）。
+
+   ```bash
+   git diff
+   ```
+
+   期待される結果：追記した行だけが差分に出ます。
+
+4. コミットを頼みます。
+
+   ```text
+   差分を確認して、Conventional Commits 形式でコミットして
+   ```
+
+   期待される結果：Claude が `git diff` などを実行し、権限の確認プロンプトを出すことがあります。内容を読んで許可すると、コミットが作られます。`git log --oneline -1` で確認します。
+
+5. `/rewind` を試します。もう 1 つ変更を頼み、`/rewind` で直前のプロンプトを選び、「Restore code」を選びます。
+
+   期待される結果：Claude が加えたファイル編集だけが元に戻ります。`git status` で確認します。
+
+6. 非対話でのコミット文生成（任意）。
+
+   ```bash
+   git add -A
+   claude -p "ステージされた変更を見て、適切なコミットを作って" --allowedTools "Bash(git diff *),Bash(git log *),Bash(git status *),Bash(git commit *)"
+   ```
+
+   期待される結果：許可した 4 種類のコマンドだけで、コミットが作られます。
+
+## よくある失敗
+
+- **`git add -A` で無関係なファイルまで commit する**
+  原因：差分を見ずに任せた。対処：コミット前に `git status` と `git diff --staged` を読み、不要な物は `git restore --staged` で外す。`.env` のような秘密のファイルは、`.gitignore` に入っているか先に確認する。
+- **`/rewind` で Bash の変更も戻ると思う**
+  原因：チェックポイントはファイル編集ツールの変更だけを追う。対処：削除や移動を伴う作業の前に commit しておく。
+- **広すぎる権限を許可する**
+  原因：毎回の確認が面倒で、`Bash` 全体を許可した。対処：`Bash(git diff *)` のように、コマンド単位で許可する。
+- **main に直接コミットする**
+  原因：ブランチを切らずに始めた。対処：先に `git switch -c` で作業ブランチを切る。CLAUDE.md に「main に直接コミットしない」と書くと伝えやすいが、強制力はない。
+- **PR を作ってから中身を読む**
+  原因：自動で作られた説明を信じた。対処：作成後に PR 画面で差分と説明を読み、リスクを Claude に補足させる。
+
+## 次へ
+
+次は [worktree：作業を分離する](/learn/intermediate/worktree) です。git worktree を使い、複数の Claude Code セッションが互いの編集を壊さないようにする方法を学びます。

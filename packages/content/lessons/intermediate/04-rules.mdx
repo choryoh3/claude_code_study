@@ -1,0 +1,201 @@
+---
+title: "rules：パス別に規約を伝える"
+level: intermediate
+order: 4
+summary: .claude/rules/ に規約をトピック別のファイルで置き、paths で対象ファイルを限定して、必要なときだけ読み込ませる方法を学ぶ。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: '`.claude/rules/` に置いた Markdown ファイルのうち、`paths` を書いていないものはいつ読み込まれるか。'
+    choices:
+      - 該当するファイルを Claude が触ったときだけ
+      - '`/memory` を実行したときだけ'
+      - 起動時に読み込まれ、すべてのファイルに対して効く
+    answerIndex: 2
+    explanation: 'paths のない rule は無条件で、起動時に `.claude/CLAUDE.md` と同じ優先度で読み込まれます。条件付きで読み込むのは `paths` を書いた rule だけです。'
+  - id: q2
+    prompt: 'TypeScript と TSX のファイルを触るときだけ適用したい。`paths` の書き方として正しいものはどれか。'
+    choices:
+      - '`- "src/**/*.{ts,tsx}"`（YAMLのリストで、ブレース展開を使う）'
+      - '`target: typescript`'
+      - '`- "<ts|tsx>"`（正規表現）'
+    answerIndex: 0
+    explanation: '`paths` は glob パターンで、YAMLのリストまたはカンマ区切りの文字列で書きます。`src/**/*.{ts,tsx}` のようにブレース展開で複数の拡張子をまとめられます。`target` のような項目は読まれず、公式が rule の項目として定めるのは `paths` だけです。正規表現も使えません。'
+  - id: q3
+    prompt: パス指定つきの rule が読み込まれるきっかけとして、公式が説明しているものはどれか。
+    choices:
+      - 該当パスのファイルが、エディタで開かれたとき
+      - Claude が Read、Write、Edit ツールで、一致するファイルを使ったとき
+      - プロンプトにそのファイル名の文字列が含まれていたとき
+    answerIndex: 1
+    explanation: 一致するファイルを Claude が Read・Write・Edit で扱ったときに読み込まれます。単一ファイルに対する `cat` や `head` のような「読み取りとみなされる」Bash も含まれます。エディタで開くことや、プロンプトの文字列は条件ではありません。
+  - id: q4
+    prompt: 'rule のファイルの frontmatter に `description: API の規約` と書いた。何が起きるか。'
+    choices:
+      - Claude が description を読んで、rule を自動で選ぶ
+      - エラーになり、Claude Code が起動しなくなる
+      - 無視される（rule で読まれる frontmatter の項目は `paths` だけ）
+    answerIndex: 2
+    explanation: 公式は、rule で Claude Code が読む項目は `paths` だけで、ほかの項目はエラーなしで無視されると説明しています。description で自動選択されるのは skill の仕組みです。rule の本文だけが文脈に入ります。
+---
+
+## ゴール
+
+- rules とは何か、CLAUDE.md や skills との使い分けを説明できる
+- `.claude/rules/` にトピック別の規約ファイルを置ける
+- `paths` で規約の対象ファイルを限定し、読み込まれることを確認できる
+
+## 前提
+
+- 基礎レッスンの[CLAUDE.md](/learn/basic/claude-md)を終えている
+- 前のレッスン[skills](/learn/intermediate/skills)で、「必要なときだけ読み込む」考え方に触れている
+
+用語の説明です。**rule（ルール）** は、`.claude/rules/` に置く Markdown の規約ファイルです。**glob（グロブ）** は、`src/**/*.ts` のようにワイルドカードでファイルを指すパターンの書き方です。
+
+## 解説
+
+### なぜ rules が必要か
+
+CLAUDE.md に何でも書くと、長くなって重要な指示が埋もれます。公式は、一部のコードにしか関係しない内容は、path-scoped rule（パスを限定した rule）か skill に移すよう勧めています。
+
+| 手段 | 読み込まれるタイミング | 向く内容 |
+| :-- | :-- | :-- |
+| CLAUDE.md | 毎セッション | 全体で守る方針、主要コマンド |
+| rules（`paths` なし） | 毎セッション（起動時） | CLAUDE.md を話題別に分けたもの |
+| rules（`paths` あり） | 一致するファイルを触ったとき | 領域ごとの規約（API、テストなど） |
+| skills | 呼び出されたとき | 作業の手順 |
+
+どの手段でも、Claude にとっては「文脈（参考情報）」です。破れない制約は、前のレッスンの permissions と hooks で担保します。
+
+### 置き場所
+
+プロジェクトの `.claude/rules/` に、トピック1つにつき1ファイルで置きます。サブフォルダ（`frontend/` など）で整理しても、`.md` ファイルは再帰的に見つけられます。個人用は `~/.claude/rules/` に置くと、自分の全プロジェクトに効きます。
+
+```text
+your-project/
+├── .claude/
+│   └── rules/
+│       ├── api.md
+│       └── testing.md
+```
+
+### paths で対象を限定する
+
+```markdown
+---
+paths:
+  - "src/api/**/*.ts"
+---
+
+# API の規約
+
+- 入力は必ず検証する
+- エラーは共通の形式で返す
+```
+
+- `paths` を書かない rule は、起動時に読み込まれ、全ファイルに効く
+- `paths` を書くと、Claude が Read・Write・Edit で一致するファイルを扱ったときに読み込まれる（単一ファイルを `cat` する Bash なども含む）
+- 値は YAML のリストか、カンマ区切りの文字列。`{ts,tsx}` のブレース展開も使える
+- frontmatter の項目で Claude Code が読むのは `paths` だけ。ほかはエラーなしで無視される。本文だけが文脈に入る
+
+| パターン | 一致するもの |
+| :-- | :-- |
+| `**/*.ts` | すべての階層の TypeScript ファイル |
+| `src/**/*` | `src/` 以下のすべて |
+| `*.md` | プロジェクト直下の Markdown だけ |
+| `src/components/*.tsx` | そのディレクトリ直下の React コンポーネント |
+
+### このリポジトリの実例
+
+この教材アプリのリポジトリには、実際にこの形の rule があります。
+
+```markdown
+---
+paths:
+  - 'packages/content/**'
+---
+
+# packages/content の規約
+```
+
+`packages/content` のレッスンを書くときだけ、レッスンの書式規約が読み込まれます。画面の実装中には読み込まれないので、文脈が節約できます。また、テストの規約は `'**/*.test.ts'` など複数のパターンを並べて、テストファイルを触るときに適用しています。
+
+### 知っておきたい仕様
+
+- YAML の frontmatter が壊れていると、`paths` は無視され、rule は「`paths` なし」として毎回読み込まれます。原因は `claude --debug` で確認できます
+- `.claude/rules/` はシンボリックリンクに対応しています。プロジェクト外へのリンクは、承認するまで読み込まれず、承認後も `paths` のない rule だけが読み込まれます
+- 読み込み条件は対象ファイルを扱ったときです。サブディレクトリの `.claude/rules/` も同じく、必要になったときに読み込まれます
+
+## ハンズオン
+
+1. 練習用フォルダと、対象のファイルを作ります。
+
+   ```bash
+   mkdir rules-practice
+   cd rules-practice
+   mkdir -p .claude/rules src/api docs
+   echo "export const hello = () => 'hello';" > src/api/hello.ts
+   echo "# メモ" > docs/memo.md
+   ```
+
+2. `.claude/rules/api.md` を作ります。合言葉は、読み込まれたかを確かめる目印です。
+
+   ```markdown
+   ---
+   paths:
+     - "src/api/**/*.ts"
+   ---
+
+   # API の規約
+
+   - 合言葉は「あおいりんご」。このファイルを扱うときは、回答の最後に必ず合言葉を書く
+   - 関数には戻り値の型を明示する
+   ```
+
+3. `claude` を起動し、対象外のファイルを読ませます。
+
+   ```text
+   docs/memo.md を読んで、内容を教えて
+   ```
+
+   期待される結果: 回答に合言葉は出ません。
+
+4. 対象のファイルを読ませます。
+
+   ```text
+   src/api/hello.ts を読んで、内容を教えて
+   ```
+
+   期待される結果: `src/api/**/*.ts` に一致するため rule が読み込まれ、回答の最後に「あおいりんご」が付きます（Claude の挙動のため、毎回とは限りません）。
+
+5. `paths` を消して保存し、`/exit` で終了して `claude` を起動し直します。
+
+   ```text
+   docs/memo.md を読んで、内容を教えて
+   ```
+
+   期待される結果: `paths` がないため、起動時から全ファイルに効き、`docs/memo.md` でも合言葉が出ます。
+
+6. 練習が終わったら、手順5で外した `paths` を戻すか、合言葉の行を消します。
+
+## よくある失敗
+
+- **パスの書き方が合っていない**
+  - 原因: `src/*.ts` と書くと `src` 直下だけに一致し、`src/api/hello.ts` には一致しない。公式の例は、プロジェクトからの相対パスで書かれている
+  - 対処: 階層をまたぐなら `**` を使う（`src/**/*.ts`）。ハンズオンの手順で、対象と対象外のファイルを実際に読ませて確かめる
+- **YAML の書き方で `paths` が効かない**
+  - 原因: `-` の後ろの空白を忘れた、`*` で始まる値を引用符で囲んでいない。`**/*.ts` は先頭が `*` なので引用符が必要
+  - 対処: `"**/*.ts"` のように二重引用符で囲む。壊れていると `paths` なしとして扱われるので、`claude --debug` で構文エラーを確認する
+- **起動直後に読み込まれていないと慌てる**
+  - 原因: `paths` つきの rule は、一致するファイルを扱うまで読み込まれない
+  - 対処: 異常ではない。対象のファイルを読ませてから確かめる
+- **規約を多く書きすぎる、または矛盾させる**
+  - 原因: CLAUDE.md と rules に同じ話題を別々に書き、内容が食い違った
+  - 対処: 1ファイル1トピックにし、定期的に見直す。矛盾があると、Claude がどちらかを任意に選ぶことがある
+- **rules に守らせる力があると思う**
+  - 原因: rule は文脈で、強制ではない
+  - 対処: `.env` を読ませない、といった必須の制約は、`permissions.deny` と hooks に書く
+
+## 次へ
+
+次は [MCP：外部ツールとつなぐ](/learn/intermediate/mcp) です。Claude Code を外部のツールやサービスにつなぐ MCP の考え方と、設定の基本を学びます。

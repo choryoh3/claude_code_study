@@ -1,0 +1,158 @@
+---
+title: "MCP：外部ツールにつなぐ"
+level: intermediate
+order: 5
+summary: MCP サーバーを claude mcp add で追加し、スコープと .mcp.json の違い、承認と信頼のリスクを理解する。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: チームの全員に同じ MCP サーバー設定を配りたい。どのスコープで追加するのが適切か。
+    choices:
+      - local スコープ（既定）。設定は ~/.claude.json に保存される
+      - project スコープ。プロジェクト直下の .mcp.json に保存され、バージョン管理で共有できる
+      - user スコープ。自分の全プロジェクトで使える
+    answerIndex: 1
+    explanation: project スコープだけが .mcp.json に書かれ、Git 経由でチームに共有されます。local と user はどちらも ~/.claude.json に保存される個人用で、チームには共有されません。
+  - id: q2
+    prompt: claude mcp add の stdio サーバーの書き方として正しいものはどれか。
+    choices:
+      - claude mcp add --transport http 名前 コマンド
+      - claude mcp add 名前 コマンド 引数（-- は不要）
+      - claude mcp add 名前 -- コマンド 引数
+    answerIndex: 2
+    explanation: stdio では、Claude 自身のオプションとサーバーを起動するコマンドを -- で区切ります。-- 以降はそのままサーバーに渡されます。--transport http は URL を渡すリモートサーバー用です。
+  - id: q3
+    prompt: リポジトリを clone したら .mcp.json があった。初回の対応として正しい認識はどれか。
+    choices:
+      - 中身を確認し、信頼できる場合だけ承認する。対話セッションでは承認プロンプトが出る
+      - clone したものは公式が検証済みなので、そのまま承認してよい
+      - MCP サーバーはサンドボックス内でしか動かないので、中身は見なくてよい
+    answerIndex: 0
+    explanation: .mcp.json には起動コマンドが書けるため、他人が書いたものは確認が必要です。公式も、各サーバーを信頼できるか確認することと、外部コンテンツを取得するサーバーはプロンプトインジェクションのリスクがあることを警告しています。
+  - id: q4
+    prompt: claude -p（非対話実行）で、リポジトリの .mcp.json にあるサーバーはどう扱われるか。
+    choices:
+      - 承認プロンプトを出せないため、必ず無効になる
+      - 承認プロンプトを出せないため、確認なしで読み込まれる
+      - 常に承認プロンプトが出て、入力を待ち続ける
+    answerIndex: 1
+    explanation: 公式は、-p などではプロンプトを出せず、project スコープのサーバーを確認なしで読み込むと説明しています。避けたい場合は disabledMcpjsonServers、--setting-sources、--strict-mcp-config などを使います。
+---
+
+## ゴール
+
+- MCP が何かを説明し、`claude mcp add` でサーバーを追加できる
+- local / project / user の 3 スコープと `.mcp.json` の関係を使い分けられる
+- 承認の仕組みと、信頼できないサーバーのリスクを説明できる
+
+## 前提
+
+- Claude Code を起動できる（基礎レッスン済み）
+- Node.js が入っている（ハンズオンで `npx` を使います）
+- 設定ファイルの考え方は、このレベルの最初のレッスン（settings）を先に読むと理解しやすい
+
+## 解説
+
+### MCP とは
+
+MCP（Model Context Protocol）は、Claude Code を外部のツールやデータ（ブラウザ操作、データベース、課題管理など）につなぐための共通の仕組みです。つなぐ相手を「MCP サーバー」と呼びます。つなぐと、Claude はそのサーバーが提供するツールを呼べるようになります。
+
+### サーバーの追加とトランスポート
+
+トランスポートは「Claude とサーバーの通信方法」です。公式で確認できたのは次の形です。
+
+```bash
+# リモート HTTP サーバー（リモートでは推奨）
+claude mcp add --transport http <name> <url>
+
+# ローカルの stdio サーバー（自分のマシン上のプロセス）
+claude mcp add [options] <name> -- <command> [args...]
+```
+
+- `stdio`：手元のマシンで起動するプロセス。`--` の後ろがそのまま起動コマンドになる
+- `http`：リモートサーバー向けに推奨
+- `sse`：非推奨。HTTP が使えるならそちらを使う
+
+主なオプションは `--scope`（`-s`）、`--env`（`-e`、`KEY=value`）、`--header`（`-H`）です。
+
+### スコープ：どこに保存され、誰に共有されるか
+
+| スコープ | 読み込まれる範囲 | チーム共有 | 保存先 |
+| --- | --- | --- | --- |
+| local（既定） | 現在のプロジェクトのみ | しない | `~/.claude.json` |
+| project | 現在のプロジェクトのみ | する（Git） | プロジェクト直下の `.mcp.json` |
+| user | 自分の全プロジェクト | しない | `~/.claude.json` |
+
+同じサーバーが複数の場所に定義された場合は local、project、user の順で優先され、設定はフィールド単位でマージされません。
+
+### .mcp.json
+
+project スコープで追加すると、次の形式のファイルができます。このリポジトリの `.mcp.json` も、ローカルで動かす Playwright 用サーバーを stdio で定義しています。
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "node",
+      "args": ["node_modules/@playwright/mcp/cli.js"]
+    }
+  }
+}
+```
+
+`command`、`args`、`env`、`url`、`headers` では `${VAR}` や `${VAR:-default}` で環境変数を展開できます。秘密の値は `.mcp.json` に直接書かず、環境変数で渡します。
+
+### 承認と信頼
+
+- 対話セッションでは、project スコープのサーバーを使う前に承認を求められます。選択をやり直すには `claude mcp reset-project-choices` を使います
+- clone したリポジトリが自分で自分のサーバーを承認することはできません。承認前は `Pending approval` と表示されます
+- `claude -p` など承認プロンプトを出せない実行では、project スコープのサーバーが確認なしで読み込まれます（詳細は「ヘッドレス実行」のレッスン）
+- 公式は「各サーバーを信頼できるか確認する」「外部コンテンツを取得するサーバーはプロンプトインジェクション（悪意ある文章でClaudeを操る攻撃）の危険がある」と警告しています
+
+## ハンズオン
+
+練習用のフォルダで行います。実在するパッケージ名は、各サーバーの公式案内で確認して置き換えてください。
+
+1. 練習用フォルダで、project スコープのサーバーを追加します。macOS / Linux / Windows(PowerShell) とも同じ書き方です。
+
+   ```bash
+   claude mcp add --scope project playwright -- npx @playwright/mcp@latest
+   ```
+
+   期待される結果：追加した旨のメッセージが出て、フォルダ直下に `.mcp.json` ができます。環境によっては `npx` の起動方法が異なることがあるので、失敗したらサーバー側の案内を確認します。
+
+2. 状態を確認します。
+
+   ```bash
+   claude mcp list
+   claude mcp get playwright
+   ```
+
+   期待される結果：`playwright` が一覧に出ます。`Connected` や `Pending approval` などの状態が表示されます。
+
+3. `claude` を起動し、承認プロンプトが出たら内容を確認してから承認します。起動後に `/mcp` を実行します。
+
+   期待される結果：`/mcp` で各サーバーの状態、認証、再接続、無効化を操作できます。
+
+4. 後片付けとして、サーバーを削除します。
+
+   ```bash
+   claude mcp remove playwright
+   ```
+
+## よくある失敗
+
+- **他人の `.mcp.json` をよく見ずに承認する**
+  原因：起動コマンドが書かれているのに、設定ファイルだと思って流してしまう。対処：`command` と `url` を読み、知らない取得元なら承認しない。`claude mcp reset-project-choices` で選択をやり直せる。
+- **API キーを `.mcp.json` に直接書いてコミットする**
+  原因：project スコープはリポジトリに入る。対処：`${VAR}` で環境変数を参照する。すでにコミットしたら、キーを失効させて再発行する。
+- **`--` を忘れて stdio サーバーの引数が Claude のオプション扱いになる**
+  原因：区切りがないと、サーバー用のフラグが `claude mcp add` に解釈される。対処：名前の後ろに `--` を置く。
+- **スコープを勘違いする**
+  原因：既定は local で、チームには共有されない。対処：共有したいなら `--scope project`、全プロジェクトで自分だけ使うなら `--scope user`。
+- **`claude -p` や CI に project スコープのサーバーが勝手に載る**
+  原因：非対話実行では承認プロンプトが出ない。対処：`--strict-mcp-config` や `disabledMcpjsonServers` で制限する。
+
+## 次へ
+
+次は [メモリ：覚えさせる・忘れさせる](/learn/intermediate/memory) です。CLAUDE.md の続きとして、Claude が自分で書く auto memory の仕組みと管理方法を学びます。
