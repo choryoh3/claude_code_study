@@ -66,6 +66,7 @@ e2e/
 ├─ learning.mjs   学習機能の通し操作
 ├─ content.mjs    教材・辞書・モバイルの確認
 ├─ a11y.mjs       アクセシビリティ検査（axe-core）
+├─ probe-contrast.mjs  調査用。axe が「要確認」にした color-contrast の、理由別の内訳を出す
 ├─ package.json   依存（playwright-core, axe-core, yaml）と、実行コマンド
 └─ README.md      このファイル
 ```

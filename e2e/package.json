@@ -9,7 +9,8 @@
     "content": "node content.mjs",
     "site": "node site.mjs",
     "a11y": "node a11y.mjs",
-    "all": "node site.mjs && node learning.mjs && node content.mjs && node a11y.mjs"
+    "all": "node site.mjs && node learning.mjs && node content.mjs && node a11y.mjs",
+    "probe:contrast": "node probe-contrast.mjs"
   },
   "dependencies": {
     "axe-core": "4.14.0",
