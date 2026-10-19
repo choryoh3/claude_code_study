@@ -1,0 +1,19 @@
+{
+  "name": "@claude-study/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@claude-study/db": "workspace:*",
+    "@claude-study/schemas": "workspace:*",
+    "@hono/zod-validator": "^0.9.1",
+    "hono": "^4.13.13",
+    "zod": "^4.6.7"
+  }
+}
