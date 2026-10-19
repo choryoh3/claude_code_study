@@ -1,0 +1,169 @@
+---
+title: 'skills：手順を再利用する'
+level: intermediate
+order: 2
+summary: 毎回説明している作業手順を SKILL.md にまとめ、/名前 で呼び出したり Claude に自動で選ばせたりする方法を学ぶ。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: プロジェクトで共有するスキル `deploy` の `SKILL.md` は、どこに置くのが公式の想定か。
+    choices:
+      - '`.claude/deploy.md`'
+      - '`.claude/commands.json` に deploy を登録する'
+      - '`.claude/skills/deploy/SKILL.md`'
+    answerIndex: 2
+    explanation: スキルは「名前のディレクトリ」の中に `SKILL.md` を置きます。プロジェクト用は `.claude/skills/<name>/SKILL.md`、個人用は `~/.claude/skills/<name>/SKILL.md` です。他の2つは公式に記載のない置き方で、スキルとして認識されません。
+  - id: q2
+    prompt: 本番デプロイのように、必ず人間が好きなタイミングで実行したい手順がある。Claude が会話の流れで勝手に起動しないようにするには、frontmatter でどうするか。
+    choices:
+      - '`disable-model-invocation: true` を指定する'
+      - '`user-invocable: false` を指定する'
+      - '`description` を空にする'
+    answerIndex: 0
+    explanation: '`disable-model-invocation: true` で Claude による自動読み込みが止まり、`/名前` で人が呼んだときだけ動きます。`user-invocable: false` は逆に `/` メニューから隠し、Claude だけが使えるようにする設定です。description を空にすると、手順の用途も伝わらなくなります。'
+  - id: q3
+    prompt: スキルの本文が Claude のコンテキストに読み込まれるのはいつか。
+    choices:
+      - セッション開始時に、すべてのスキルの本文が読み込まれる
+      - スキルが呼び出されたとき（人が `/名前` で呼ぶか、Claude が description から選んだとき）
+      - ファイルを保存した瞬間に、実行中の全会話へ貼り付けられる
+    answerIndex: 1
+    explanation: 常にコンテキストにあるのは description だけで、本文は呼び出されたときに初めて読み込まれます。だから、使わない手順がコンテキストを圧迫しません。ただし description が曖昧だと、Claude が選ぶ判断を誤ります。
+  - id: q4
+    prompt: 'スキル本文に `$ARGUMENTS` と書き、`/explain-file README.md` と実行した。`$ARGUMENTS` は何に置き換わるか。'
+    choices:
+      - 空文字になる
+      - '`/explain-file README.md` というメッセージ全体'
+      - '`README.md`（コマンド名の後ろに入力した文字列）'
+    answerIndex: 2
+    explanation: '`$ARGUMENTS` はコマンド名の後ろに入力した引数がそのまま入ります。メッセージ全体ではありません。なお、本文にどのプレースホルダも無いと、末尾に `ARGUMENTS:` として引数が自動で追加されます。'
+---
+
+## ゴール
+
+- スキル（skill）とは何か、CLAUDE.md や rules との違いを説明できる
+- `SKILL.md` の置き場所と、主な frontmatter の項目を使い分けられる
+- 引数を受け取るスキルを作り、`/名前` で呼び出せる
+
+## 前提
+
+- 基礎レッスンの[スラッシュコマンド入門](/learn/basic/slash-commands)と[CLAUDE.md](/learn/basic/claude-md)を終えている
+- 前のレッスン [settings.json](/learn/intermediate/settings) を読んでいる（スキルの許可設定でも出てきます）
+
+用語の説明です。**スキル** は、「この作業はこの手順で」という指示を `SKILL.md` というファイルにまとめたものです。**frontmatter** はファイル先頭の `---` で囲んだ設定欄（YAML形式）のことです。
+
+## 解説
+
+### CLAUDE.md との使い分け
+
+CLAUDE.md は毎セッション必ず読み込まれる常時の方針です。複数ステップの手順や、一部の作業でしか要らない内容を詰め込むと、常に文脈を圧迫します。公式もそうした内容はスキルに移すよう勧めています。
+
+| 手段      | 読み込まれるタイミング | 向く内容                       |
+| :-------- | :--------------------- | :----------------------------- |
+| CLAUDE.md | 毎セッション           | 全体で守る方針、ビルドコマンド |
+| スキル    | 呼び出されたとき       | 手順、チェックリスト、定型作業 |
+
+### 置き場所
+
+| 種類         | 場所                               | 効く範囲                           |
+| :----------- | :--------------------------------- | :--------------------------------- |
+| 個人         | `~/.claude/skills/<name>/SKILL.md` | 自分の全プロジェクト               |
+| プロジェクト | `.claude/skills/<name>/SKILL.md`   | このリポジトリ（コミットして共有） |
+
+ほかにサブディレクトリ用、プラグイン用などもあります。同名のとき、個人スキルがプロジェクトスキルより優先されます。必ず「名前のディレクトリ」を作り、その中に `SKILL.md` を置きます。
+
+### SKILL.md の書き方
+
+```markdown
+---
+name: explain-file
+description: 指定したファイルの役割を初心者向けに説明する。ファイルの説明を頼まれたときに使う。
+argument-hint: '[ファイルのパス]'
+disable-model-invocation: true
+---
+
+$ARGUMENTS を読み、次の形で日本語で説明してください。
+
+1. 一言でいうと何のファイルか
+2. 主要な部分の説明（3点まで）
+3. 初心者がつまずきそうな点
+```
+
+主な項目は次のとおりです（すべて任意で、公式は `description` を推奨しています）。
+
+| 項目                       | 意味                                                                          |
+| :------------------------- | :---------------------------------------------------------------------------- |
+| `name`                     | `/` メニューに出る名前。省略するとディレクトリ名                              |
+| `description`              | 何をするか、いつ使うか。Claude が自動で選ぶ根拠になる。大事な用途を先頭に書く |
+| `argument-hint`            | 補完時に出る引数のヒント                                                      |
+| `disable-model-invocation` | `true` で Claude の自動起動を止め、人が呼んだときだけ動かす                   |
+| `user-invocable`           | `false` で `/` メニューから隠し、Claude だけが使えるようにする                |
+| `allowed-tools`            | そのスキルの実行中に、確認なしで使えるツール                                  |
+| `paths`                    | 自動読み込みを、一致するファイルを扱うときだけに限るglobパターン              |
+| `context`                  | `fork` でサブエージェントの中で実行する（次のレッスンで扱います）             |
+
+項目名は完全一致が必要で、未知の項目は**エラーにならず無視されます**。つづりミスに気づきにくいので注意してください。frontmatter はファイルの1行目から始め、YAMLが壊れていると項目が何も効きません。
+
+### 呼び出し方と引数
+
+- 直接: `/explain-file README.md` のように、メッセージの**先頭**に書く。文の途中に書いても、そのスキルは実行されません
+- 自動: Claude が `description` を見て、依頼内容に合うと判断したときに読み込む
+- 引数: `$ARGUMENTS` は全引数、`$0` `$1` は0始まりの位置指定。複数語は引用符で囲む
+
+### 反映のタイミング
+
+スキルの追加・編集・削除は、実行中のセッションに再起動なしで反映されます。ただし、セッション中に**最上位の skills ディレクトリを新規作成**した場合は `/reload-skills` を一度実行します。
+
+### 補足：commands との関係
+
+`.claude/commands/deploy.md` と `.claude/skills/deploy/SKILL.md` は、どちらも `/deploy` を作り同じように動きます。古い commands ファイルも動き続けますが、公式は新規ならスキルを勧めています。同名なら、スキルが優先されます。
+
+## ハンズオン
+
+1. 練習用フォルダを作り、スキルのディレクトリを用意します。
+
+   ```bash
+   mkdir skills-practice
+   cd skills-practice
+   mkdir -p .claude/skills/explain-file
+   echo "# 練習用プロジェクト" > README.md
+   ```
+
+2. `.claude/skills/explain-file/SKILL.md` に、上の「SKILL.md の書き方」の例をそのまま保存します。
+3. `claude` を起動します（`.claude/skills` を作ってから起動するため、`/reload-skills` は不要です）。
+4. `/` を入力し、`explain` と続けます。
+   期待される結果: 候補に `explain-file` が出ます。説明文も一緒に表示されます。
+5. 次を実行します。
+
+   ```text
+   /explain-file README.md
+   ```
+
+   期待される結果: `README.md` を読み、手順どおりに3項目の説明が日本語で返ります。
+
+6. `SKILL.md` の手順2を「例を1つ付ける」に書き換えて保存し、もう一度実行します。
+   期待される結果: 再起動なしで、変更後の手順どおりの出力になります。
+7. `disable-model-invocation: true` の行を消して、「README.md ってどんなファイル？」と普通に質問してみます。
+   期待される結果: Claude が description に合うと判断すれば、スキルを自動で読み込みます（毎回そうなるとは限りません）。
+
+## よくある失敗
+
+- **スキルが `/` に出てこない**
+  - 原因: `SKILL.md` を名前ディレクトリに入れていない、ファイル名を `SKILL.md` と書いていない、frontmatter が1行目から始まっていない
+  - 対処: `.claude/skills/<name>/SKILL.md` の形を確認する。セッション中に最上位の skills ディレクトリを作ったなら `/reload-skills` を実行する
+- **frontmatter の項目が効かない**
+  - 原因: 項目名のつづりが違っても、エラーにならず無視される。`description` に `: ` を含むのにYAMLの引用符がないと、frontmatter 全体が読めなくなる
+  - 対処: 項目名を公式の表と照合する。値は必要なら二重引用符で囲む
+- **Claude が勝手にスキルを起動する、または全然起動しない**
+  - 原因: `description` が広すぎる、または狭すぎる
+  - 対処: 「何をするか」と「いつ使うか」を具体的に書く。副作用がある手順（デプロイ、削除、push）は `disable-model-invocation: true` にする
+- **文の途中に `/名前` と書いて動かない**
+  - 原因: スキル名はメッセージの先頭にあるときだけ実行される
+  - 対処: 先頭に書き、後ろを引数にする
+- **`allowed-tools` を広く与えすぎる**
+  - 原因: 手順を通すために `Bash` 全体などを許可してしまう
+  - 対処: `Bash(git status *)` のように範囲を絞る。広い許可は、スキルが呼ばれるたびに確認なしで効く
+
+## 次へ
+
+次は [subagents：役割を分けて任せる](/learn/intermediate/subagents) です。調査やレビューを別の文脈で行う専門のエージェントを定義して、メインの会話を汚さずに仕事を任せます。

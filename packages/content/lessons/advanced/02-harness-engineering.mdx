@@ -1,0 +1,203 @@
+---
+title: 'ハーネスエンジニアリング：自己検証ループを作る'
+level: advanced
+order: 2
+summary: 'hooks・1コマンドの検証・CI を組み合わせ、Claude が自分で正しさを確かめて直せる環境を作る。'
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: PreToolUse の hook で、危険なコマンドの実行を確実にブロックしたい。スクリプトの終了コードはどうするのが正しいか。
+    choices:
+      - '`exit 1` で終了する（Unix では失敗を表す標準的なコード）'
+      - '`exit 2` で終了し、理由を stderr に出す'
+      - '`exit 0` で終了し、標準出力に拒否の文言を書く'
+    answerIndex: 1
+    explanation: 公式では、終了コード 2 がブロッキングエラーで、stderr の内容が Claude に伝わります。1 などその他の非ゼロは非ブロッキングのエラーで、コマンドはそのまま実行されます。0 は「判断なし」で、通常の権限判定に進みます。
+  - id: q2
+    prompt: Stop hook で `pnpm test` を走らせ、失敗したら Claude に直させたい。無限ループを防ぐために入力のどのフィールドを確認すべきか。
+    choices:
+      - '`transcript_path`'
+      - '`tool_name`'
+      - '`stop_hook_active`'
+    answerIndex: 2
+    explanation: '`stop_hook_active` は、直前の stop hook のブロックを受けて Claude が続行している最中に true になります。これを見て、解消しようのない条件で何度もブロックしないようにします。`tool_name` はツール系イベントのフィールドで、`transcript_path` は会話ログの場所です。'
+  - id: q3
+    prompt: PostToolUse の hook（編集後の整形など）について正しい説明はどれか。
+    choices:
+      - ツールはすでに実行済みで、ブロックはできない。exit 2 は stderr を Claude に伝えるために使う
+      - exit 2 を返すと、すでに実行された編集が取り消される
+      - 編集前に走るので、編集内容を拒否できる
+    answerIndex: 0
+    explanation: PostToolUse はツールが成功した後に走るため、実行を止められません。止めたいときは PreToolUse を使います。整形後に直せない lint エラーが残るときだけ exit 2 で Claude に知らせる、という使い方が向いています。
+  - id: q4
+    prompt: 「完了」の判定をハーネスとして設計するとき、最も良い方法はどれか。
+    choices:
+      - Claude に「テストは通った気がする」と自己申告させる
+      - CI にだけ検証を置き、ローカルでは検証しない
+      - テスト・型・lint・ビルドを 1 コマンドにまとめ、その終了コードを完了条件にする。CI でも同じコマンドを使う
+    answerIndex: 2
+    explanation: 機械的に判定できる条件（終了コード）にすれば、Claude 自身がループの中で検証できます。ローカルと CI で同じコマンドを使えば、ローカルで通ったのに CI で落ちる、という差も減ります。自己申告や CI だけの検証では、修正のフィードバックが遅れます。
+---
+
+## ゴール
+
+- 「Claude が自分で正しさを確かめられる環境（ハーネス）」とは何かを説明できる
+- hooks の終了コードの意味を理解し、整形・停止時検証・危険コマンドのブロックを設計できる
+- 検証を 1 コマンドにまとめ、ローカルと CI で同じ判定を使える
+
+## 前提
+
+- 中級で hooks の基本（`settings.json` への書き方）を学んでいる
+- プロジェクトにテスト・型チェック・lint のコマンドがある（なければ、まずテストを 1 つ用意する）
+- Node.js が使える（ハンズオンのスクリプトは Node で書く）
+
+## 解説
+
+### なぜハーネスが必要か
+
+ハーネス（harness）は、もともと「テストを走らせるための仕掛け」を指す言葉です。ここでは、Claude が書いた変更を、人間の確認を待たずに機械的に検証し、失敗したら自分で直せる仕組み全体を指します。
+
+CLAUDE.md の指示は参考情報であり、強制ではありません。「テストを通してから終わる」と書いても、守られる保証はありません。守らせたいことは、終了コードで判定できる形にして、hooks などの強制力のある仕組みに任せます。
+
+### 3 つの層で作る
+
+| 層           | 役割                                | 例                                                                                   |
+| ------------ | ----------------------------------- | ------------------------------------------------------------------------------------ |
+| 検証コマンド | 正しさの判定そのもの                | `pnpm verify`（format・lint・typecheck・test・build を順に実行し、失敗で非ゼロ終了） |
+| hooks        | Claude の動きの途中に判定を差し込む | 編集後の整形、停止前のテスト、危険コマンドのブロック                                 |
+| CI           | 人間・Claude を問わず最後の砦       | プルリクエストで同じ `pnpm verify` を実行                                            |
+
+### hooks の終了コード（公式の仕様）
+
+| 終了コード       | 意味                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| 0                | 成功。「判断なし」で、通常の権限判定に進む                                                |
+| 2                | ブロッキングエラー。ブロックできるイベントでは、その動作を止める。stderr が Claude に渡る |
+| その他（1 など） | 非ブロッキングエラー。動作はそのまま進み、記録に注意が出る                                |
+
+特に重要なのは、`exit 1` ではブロックされない点です。ポリシーを強制したいときは必ず `exit 2` を使います。
+
+### イベントごとの使い分け
+
+- PreToolUse（ツール実行前）: 実行を止められる。危険コマンドのブロックに向く。JSON 出力の `permissionDecision`（`allow` / `deny` / `ask` / `defer`）でも制御できる
+- PostToolUse（ツール成功後）: すでに実行済みなので止められない。整形や、直せない問題を Claude に伝えるのに向く
+- Stop（Claude が応答を終えるとき）: exit 2 か `"decision": "block"` で、停止を止めて続行させられる。入力の `stop_hook_active` が true なら、すでに続行中という意味なので、ブロックを繰り返さないようにする。公式によれば、連続する続行は 8 回までに制限される
+
+### このリポジトリの実例
+
+`.claude/settings.json` に、次の 3 つの hook が登録されています。
+
+- `PreToolUse`（`Bash`）: `guard-bash.mjs` が `rm -rf`、force push、`.env` の `git add` などを検出し、`exit 2` で拒否する
+- `PostToolUse`（`Edit|Write|MultiEdit`）: `format.mjs` が編集したファイルに prettier と `eslint --fix` を適用し、直せない lint エラーがあるときだけ `exit 2`
+- `Stop`: `stop-verify.mjs` が `pnpm typecheck` と `pnpm test` を実行し、失敗なら `exit 2`。`stop_hook_active` なら何もしない
+
+Stop hook では typecheck と test だけを走らせ、build や format は含めていません。毎回の停止で待たされる時間を抑えるためです。完全な検証は `pnpm verify`（`scripts/verify.mjs`）に任せ、CI でも同じコマンドを実行します。
+
+### 完了条件を機械的にする
+
+「きれいに直して」ではなく、「`pnpm verify` が終了コード 0 で終わる」を完了条件にします。条件が曖昧だと、Claude は自分で成否を判断できず、ループが回りません。
+
+## ハンズオン
+
+練習用の Node プロジェクト（`package.json` があり、`npm test` が動くもの）で、Stop 時にテストを走らせるハーネスを作ります。
+
+1. フォルダを作り、検証スクリプト `.claude/hooks/stop-verify.mjs` を作ります。
+
+   ```javascript
+   // Stop hook: 失敗していれば exit 2 で Claude に続行させる
+   import { spawnSync } from 'node:child_process';
+
+   let data = '';
+   process.stdin.setEncoding('utf8');
+   for await (const chunk of process.stdin) data += chunk;
+
+   const input = JSON.parse(data || '{}');
+   if (input.stop_hook_active) process.exit(0); // 無限ループ防止
+
+   const r = spawnSync('npm', ['test'], { encoding: 'utf8', shell: true });
+   if (r.status !== 0) {
+     const tail = `${r.stdout}${r.stderr}`.split('\n').slice(-40).join('\n');
+     console.error(`npm test が失敗しました。修正してください:\n${tail}`);
+     process.exit(2);
+   }
+   ```
+
+2. `.claude/settings.json` に登録します。
+
+   ```json
+   {
+     "hooks": {
+       "Stop": [
+         {
+           "hooks": [
+             {
+               "type": "command",
+               "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-verify.mjs\"",
+               "timeout": 300
+             }
+           ]
+         }
+       ]
+     }
+   }
+   ```
+
+3. 危険コマンドのブロックも追加します。`.claude/hooks/guard.mjs` を作ります。
+
+   ```javascript
+   let data = '';
+   process.stdin.setEncoding('utf8');
+   for await (const chunk of process.stdin) data += chunk;
+
+   const command = JSON.parse(data || '{}')?.tool_input?.command ?? '';
+   if (/\bgit\s+reset\s+--hard\b/.test(command)) {
+     console.error('git reset --hard は禁止です');
+     process.exit(2);
+   }
+   ```
+
+   `settings.json` の `hooks` に、`PreToolUse` を `matcher` が `Bash` で追加します。
+
+   ```json
+   "PreToolUse": [
+     {
+       "matcher": "Bash",
+       "hooks": [
+         { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.mjs\"" }
+       ]
+     }
+   ]
+   ```
+
+4. Claude Code を起動し直し、わざとテストを壊させます。
+
+   ```text
+   テストの期待値を間違った値に書き換えて、そのまま終わって
+   ```
+
+   期待される結果：Claude が応答を終えようとすると Stop hook が `npm test` を実行して失敗し、エラー内容が Claude に返ります。Claude は続行してテストを直します。
+
+5. 危険コマンドを試します。
+
+   ```text
+   git reset --hard を実行して
+   ```
+
+   期待される結果：実行前にブロックされ、`git reset --hard は禁止です` が Claude に伝わります。
+
+## よくある失敗
+
+- **hook が失敗しているのに止まらない**
+  原因：`exit 1` で終了している。1 は非ブロッキングエラーで、動作は続行される。対処：止めたいときは `exit 2` を使い、理由を stderr に出す。
+- **Stop hook が延々と Claude を動かし続ける**
+  原因：`stop_hook_active` を見ておらず、直せない失敗でブロックを繰り返す。対処：`stop_hook_active` が true なら `exit 0`。公式の上限は連続 8 回だが、それに頼らない。
+- **PostToolUse でブロックしようとして効かない**
+  原因：PostToolUse はツール実行後なので止められない。対処：事前に止めたい処理は PreToolUse に置く。
+- **Windows で hook が動かない・パスが合わない**
+  原因：`tool_input.file_path` の区切りがバックスラッシュになる。対処：パスを正規化してから判定する。
+- **ローカルでは通るのに CI で落ちる**
+  原因：ローカルと CI で検証内容が違う。対処：`pnpm verify` のように 1 コマンドにして、CI でも同じものを実行する。
+
+## 次へ
+
+次は [カスタムskill・agentの設計](/learn/advanced/custom-skill-agent) です。ハーネスの中で動く skill と subagent を、迷わず選ばれて、権限も最小になるように設計します。

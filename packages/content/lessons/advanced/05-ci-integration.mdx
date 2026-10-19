@@ -1,0 +1,177 @@
+---
+title: 'CI連携：GitHub Actionsで使う'
+level: advanced
+order: 5
+summary: 公式のGitHub Actions連携とヘッドレス実行を使い、シークレットと権限を守ったままPRレビューなどをCIに組み込む方法を学ぶ。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: 'CIで claude -p を実行するとき、公式がスクリプト用途に推奨する --bare を付ける主な理由はどれか。'
+    choices:
+      - '出力がJSON形式になり、後処理しやすくなるから'
+      - '実行環境ごとのフック・MCPサーバー・CLAUDE.mdなどの自動読み込みをスキップし、どのマシンでも同じ結果になりやすいから'
+      - '権限確認がすべて自動で承認され、--allowedTools が不要になるから'
+    answerIndex: 1
+    explanation: '--bare はフック、スキル、サブエージェント、プラグイン、MCPサーバー、自動メモリ、CLAUDE.md の自動検出をスキップして起動を速くし、実行環境の差を減らす。JSON出力は --output-format json の役割。権限の自動承認はしないので、必要なツールは --allowedTools などで明示する。'
+  - id: q2
+    prompt: 'ワークフローでAPIキーを扱う方法として正しいものはどれか。'
+    choices:
+      - 'リポジトリのSecretsに保存し、ワークフローでは secrets コンテキスト経由で渡す'
+      - 'ワークフローYAMLに直接書き、リポジトリを非公開にして守る'
+      - 'プロンプトに含めて、Claudeに必要なときだけ使わせる'
+    answerIndex: 0
+    explanation: '公式は、APIキーやOAuthトークンをコミットせず、GitHub Secretsに保存して参照するよう求めている。非公開リポジトリでも、履歴や権限を持つ人経由で漏れうる。プロンプトに入れた値は会話内容として扱われ、ログや出力に出る恐れがある。'
+  - id: q3
+    prompt: 'pull_request_target をトリガーにClaudeを動かすとき、最も重要な注意はどれか。'
+    choices:
+      - 'ベースリポジトリのシークレットで動くので、信頼できないPRのコードをワークスペース直下にチェックアウトしない'
+      - 'フォークからのPRでは動かないので、チェックアウトの設定は気にしなくてよい'
+      - 'シークレットが自動的に隠されるので、権限の設定は不要である'
+    answerIndex: 0
+    explanation: 'pull_request_target と workflow_run は、ベースリポジトリのシークレットを持った状態で動く。PR側のコードを直下にチェックアウトすると、攻撃者の書いたファイルがその権限で実行・参照されうる。公式の推奨は、既定のチェックアウト（ベースブランチ）に留め、PRのファイルが必要なら別ディレクトリに置いて --add-dir で渡すこと。'
+  - id: q4
+    prompt: 'Claudeがワークフロー内でPRにコミットを押したのに、既存のCIワークフローが起動しない。公式が挙げる原因はどれか。'
+    choices:
+      - 'ANTHROPIC_API_KEY が未設定だから'
+      - '既定の GITHUB_TOKEN で作られたコミットは、GitHubの仕様でワークフローを起動しないから'
+      - 'Claudeのコミットは必ずドラフト扱いになるから'
+    answerIndex: 1
+    explanation: '公式のトラブルシューティングでは、GITHUB_TOKEN で行った操作はワークフローを起動しないとされる。github_token を渡している場合は外してGitHub Appとして動かすか、独自のAppトークンを使う。APIキー未設定は認証エラーの原因であり、CIが起動しない理由ではない。'
+---
+
+## ゴール
+
+- Claude CodeをCIで動かす3つの方法（公式Action、公式Code Review、`claude -p`）を使い分けられる
+- シークレット、権限、起動条件を最小に保つ設計理由を説明できる
+- `pull_request_target` とプロンプトインジェクションの危険を理解し、PRレビューのワークフローを安全に組める
+
+## 前提
+
+- 基礎レッスンの権限モード（`/learn/basic/permission-modes`）とCLAUDE.md（`/learn/basic/claude-md`）を終えていること
+- GitHub Actionsの基本（ワークフロー、ジョブ、Secrets）を知っていること
+- リポジトリの管理者権限があること（公式のセットアップに必要）
+
+**ヘッドレス実行** とは、人が画面の前にいなくても `claude -p "指示"` で1回だけ実行して結果を出力する使い方です。CIでClaude Codeを使う土台になります。
+
+## 解説
+
+### CIでClaudeを使う3つの方法
+
+| 方法                                       | 内容                                                                                             | 向いている場面                                        |
+| :----------------------------------------- | :----------------------------------------------------------------------------------------------- | :---------------------------------------------------- |
+| 公式Action `anthropics/claude-code-action` | ワークフローに組み込み、`@claude` メンション（対話モード）や `prompt` 指定（自動化モード）で動く | issueからPR作成、コメントでの修正依頼、独自のレビュー |
+| 公式の Code Review                         | ワークフローを書かずに、PRごとに自動レビューする                                                 | まず手軽に始めたいとき                                |
+| `claude -p` を自前で実行                   | CLI（コマンドライン）をスクリプトやジョブから呼ぶ                                                | 既存のCIやスクリプトへの組み込み                      |
+
+このレッスンでは公式Actionと `claude -p` を扱います。Code Reviewの設定は公式ドキュメントを参照してください。
+
+### セットアップ（公式Action）
+
+- **かんたん**: Claude Codeで `/install-github-app` を実行します。GitHub Appのインストール、シークレットの登録、ワークフローのPR作成まで案内されます。github.com のリポジトリのみ対象です
+- **手動**: Claude GitHub Appを入れ、シークレットを登録し、公式の `examples/claude.yml` をコピーします
+
+シークレット名は、APIキーなら `ANTHROPIC_API_KEY`、サブスクリプションのトークンなら `CLAUDE_CODE_OAUTH_TOKEN` です。ワークフローでは、それぞれ `anthropic_api_key`、`claude_code_oauth_token` に渡します。組織で共有するキーにはAPIキーが向きます。OAuthトークンは、`claude setup-token` を実行した個人のサブスクリプションに紐づくためです。
+
+### ヘッドレス実行のCIでの要点
+
+```bash
+claude --bare -p "Summarize README.md" --allowedTools "Read"
+```
+
+- `--bare`: フック、MCP、CLAUDE.md などの自動読み込みを省き、環境差を減らします。`--bare` では認証にサブスクリプションのログインを使わないため、`ANTHROPIC_API_KEY` を環境変数で渡します
+- `--bare` なしの `-p` は、信頼ダイアログもMCPの承認も出ません。リポジトリの `.claude/settings.json` のフックや `.mcp.json` のサーバーがそのまま動きます。**他人が書いたPRの内容を読むCI** では特に意識してください
+- `--allowedTools`: 使ってよいツールを明示します。`Bash(git diff *)` のように範囲を絞れます
+- `--permission-mode dontAsk`: 確認が必要になる操作をすべて拒否します。無人のCI向きです
+- `--output-format json`: 結果やコストの見積り（`total_cost_usd`）を取り出せます
+
+### 安全に運用する設計
+
+1. **シークレットはSecretsだけに置く。** コード・プロンプト・ログに出さない。`show_full_output` は既定で無効で、有効にするとツール出力やファイル内容がログに出ます。公開リポジトリではログも公開されるため、有効にしません
+2. **権限を最小にする。** ワークフローの `permissions:` と、Claudeに許すツール（`claude_args` の `--allowedTools`）の両方を絞ります
+3. **誰が起動できるかを絞る。** 公式Actionは、issue・PR系のイベントで起動者に書き込み権限を要求し、bot は `allowed_bots` に載せない限り拒否します。`allowed_non_write_users` は公式が「RISKY」と位置づけているため、権限の狭い用途に限ります
+4. **PRの本文・コメントを信用しない。** そこに隠された指示（HTMLコメントなど）でClaudeを操る **プロンプトインジェクション** が起こりえます。Actionは一部を除去しますが、突破される可能性があると公式も述べています
+5. **`pull_request_target` と `workflow_run` に注意。** これらはベースリポジトリのシークレットで動きます。信頼できないPRのコードを、ワークスペース直下にチェックアウトしてはいけません。Actionは、PR上で `.claude/`、`.mcp.json`、`CLAUDE.md` などをベースブランチの内容に戻してから起動しますが、`package.json` やロックファイルなどは戻りません
+6. **フォークPRではシークレットが渡らない。** 公開リポジトリでは、GitHubがフォークPRにシークレットを渡さないため、公式のレビュー例は同一リポジトリのブランチのPRでだけ動きます
+
+### コストと暴走の抑制
+
+`--max-turns` で反復回数、ジョブの `timeout-minutes` で時間、`concurrency` で並列数を制限します（公式は、ターン数・ワークフローのタイムアウト・並列制御の3つを挙げています）。CLAUDE.md を短く保つことも、毎回の読み込みを減らします。
+
+## ハンズオン
+
+公式の「PRレビュー」例をもとに、最小権限と上限を加えたワークフローを作ります。**必ず練習用のリポジトリで** 行ってください。
+
+1. 練習用リポジトリで、Claude Codeを起動して `/install-github-app` を実行します。手動の場合は、Claude GitHub Appを入れたうえで、APIキーを登録します。
+
+   ```bash
+   gh secret set ANTHROPIC_API_KEY
+   ```
+
+   期待される結果: 値の入力を求められ、リポジトリのSecretsに `ANTHROPIC_API_KEY` が登録されます。値は画面にもシェル履歴にも残りません。
+
+2. `.github/workflows/claude-review.yml` を作ります。`uses` のSHAは、各Actionのリリースページで、使うバージョンのコミットSHA（40桁）を確認して置き換えてください。
+
+   ```yaml
+   name: Claude Review
+   on:
+     pull_request:
+       types: [opened, synchronize, ready_for_review, reopened]
+
+   concurrency:
+     group: claude-review-${{ github.event.pull_request.number }}
+     cancel-in-progress: true
+
+   jobs:
+     review:
+       runs-on: ubuntu-latest
+       timeout-minutes: 15
+       permissions:
+         contents: read
+         pull-requests: read
+         issues: read
+         id-token: write
+       steps:
+         # タグ（@v6 や @v1）ではなく、確認済みのコミットSHAに固定する
+         - uses: actions/checkout@<40桁のコミットSHA> # v6
+           with:
+             fetch-depth: 1
+         - uses: anthropics/claude-code-action@<40桁のコミットSHA> # v1
+           with:
+             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+             plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+             plugins: 'code-review@claude-code-plugins'
+             prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+             claude_args: |
+               --max-turns 10
+               --allowedTools "mcp__github_inline_comment__create_inline_comment"
+   ```
+
+   公式の例はタグ（`@v1` など）で書かれていますが、タグは後から付け替えられるため、サプライチェーン対策としてはコミットSHAへの固定が望ましいです。`permissions` は読み取りのみにしてあります。`id-token: write` は、公式Actionの既定のGitHub App認証に必要と説明されています。
+
+3. 同じリポジトリ内のブランチから、小さな変更のPRを作ります（フォークではなく同一リポジトリのブランチ。ドラフトは対象外です）。
+
+   期待される結果: Actionsタブで `Claude Review` が起動し、PRに指摘のインラインコメント、または指摘がない場合は要約コメントが付きます。`--comment` を外すと、結果はログにだけ出ます。
+
+4. ログを開き、`ANTHROPIC_API_KEY` の値が表示されていないこと（`***` に伏せられること）を確認します。
+
+## よくある失敗
+
+- **Claudeのコミットでテスト用CIが動かない**
+  - 原因: `github_token` に `secrets.GITHUB_TOKEN` を渡している。`GITHUB_TOKEN` による操作は、ワークフローを起動しない
+  - 対処: `github_token` の指定を外してGitHub Appとして動かすか、独自のAppトークンを使う。CI側のトリガー（`push` / `pull_request`）も確認する
+- **フォークからのPRでレビューが動かない**
+  - 原因: 公開リポジトリでは、フォークPRにシークレットが渡らない
+  - 対処: 想定どおりの挙動。回避のために `pull_request_target` に変えると、シークレット流出の危険が一気に高まる。同一リポジトリのブランチで動かす運用にする
+- **`@claude` に反応しない**
+  - 原因: Appが未インストール、Secretsが未登録、コメントした人に書き込み権限がない、`@claude` が単語として独立していない（`@claude-bot` など）
+  - 対処: 公式のトラブルシューティングの順に確認する
+- **レビューの費用が膨らむ**
+  - 原因: ターン数と時間に上限がなく、PRの更新のたびに並列で起動する
+  - 対処: `--max-turns`、`timeout-minutes`、`concurrency` を入れる。モデルは `claude_args` の `--model` で指定できる
+- **デバッグのために全出力を有効にして、秘密がログに出る**
+  - 原因: `show_full_output` を有効にした（`ACTIONS_STEP_DEBUG` が `true` のときも自動で有効になる）
+  - 対処: 非公開リポジトリかつ、秘密が出ないと確認できる場合だけにする
+
+## 次へ
+
+次は [コスト・コンテキストの最適化](/learn/advanced/cost-context) です。CIでも手元でも効く、トークン消費を抑える考え方を学びます。

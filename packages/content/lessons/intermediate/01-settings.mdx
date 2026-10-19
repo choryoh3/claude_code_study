@@ -1,0 +1,221 @@
+---
+title: 'settings.json：permissions・hooks・env'
+level: intermediate
+order: 1
+summary: settings.json の置き場所と優先順位を押さえ、permissions で許可と拒否を決め、hooks で必ず実行したい処理を差し込む。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: チームで共有する権限ルールと、自分だけの上書き設定を分けて置きたい。公式の想定に合う組み合わせはどれか。
+    choices:
+      - 共有は `~/.claude/settings.json`、個人は `.claude/settings.json`
+      - 共有は `.claude/settings.json`（コミットする）、個人は `.claude/settings.local.json`
+      - どちらも `.claude/settings.json` に書き、個人分はコメントで区別する
+    answerIndex: 1
+    explanation: '`.claude/settings.json` はチームがGitで共有するプロジェクト設定で、`.claude/settings.local.json` はそのプロジェクトでの自分専用です。`~/.claude/settings.json` は全プロジェクト共通の個人設定なので、共有用ではありません。JSONにコメントは書けません。'
+  - id: q2
+    prompt: 'ある操作が `permissions.allow` の `Bash(aws s3 ls)` と `permissions.deny` の `Bash(aws *)` の両方に一致した。結果はどうなるか。'
+    choices:
+      - より具体的な allow が優先され、実行できる
+      - 後から書いたほうが優先される
+      - deny が優先され、ブロックされる
+    answerIndex: 2
+    explanation: ルールは deny、ask、allow の順に評価され、最初に一致したものが結果になります。ルールの具体性は順序を変えません。allow で deny の例外を作ることはできません。
+  - id: q3
+    prompt: '`Bash(ls *)` と `Bash(ls*)` の違いとして正しいものはどれか。'
+    choices:
+      - '`Bash(ls *)` は `lsof` に一致しないが、`Bash(ls*)` は一致する'
+      - 両者は完全に同じ意味である
+      - '`Bash(ls*)` のほうが厳密で、`ls` 単体にしか一致しない'
+    answerIndex: 0
+    explanation: 末尾の `*` の前にある空白もルールの一部です。`ls *` は `ls` と `ls -la` に一致し、`lsof` には一致しません。空白のない `ls*` は `lsof` にも一致するため、意図せず広い許可になりえます。
+  - id: q4
+    prompt: PostToolUse フックでファイル編集後にテストを走らせ、失敗したので `exit 2` で終了した。編集はどうなるか。
+    choices:
+      - 編集は取り消され、ファイルが元に戻る
+      - 編集はすでに実行済みで元に戻らず、stderr の内容が Claude に伝えられる
+      - フックの終了コードは無視され、何も起きない
+    answerIndex: 1
+    explanation: PostToolUse はツールが成功したあとに動くため、実行済みの操作は止められません。exit 2 の stderr は Claude に渡されます。操作を事前に止めたいなら PreToolUse を使います。
+---
+
+## ゴール
+
+- `settings.json` の置き場所と、同じキーが複数あるときの優先順位を説明できる
+- `permissions` の `allow` / `ask` / `deny` を、安全側に倒して書ける
+- `hooks` で「必ず実行したい処理」や「確実に止めたい操作」を設定できる
+- `env` の使い方と、書いてはいけないものを知る
+
+## 前提
+
+- 基礎レッスンの[権限モード](/learn/basic/permission-modes)と[CLAUDE.md](/learn/basic/claude-md)を終えている
+- 練習用の、壊れても困らないフォルダと Node.js（フックの練習で使う）がある
+
+用語の説明です。**settings.json** は Claude Code の動作を決める JSON の設定ファイルです。**hook（フック）** は、Claude Code の動作の特定のタイミング（例: コマンド実行の直前）で、あなたが用意したコマンドを自動実行する仕組みです。
+
+## 解説
+
+### 置き場所と優先順位
+
+| 優先度  | 場所                          | 誰に効くか                       |
+| :------ | :---------------------------- | :------------------------------- |
+| 1（高） | 組織の管理設定                | 組織全体。自分では上書きできない |
+| 2       | `claude --settings`           | そのセッションだけ               |
+| 3       | `.claude/settings.local.json` | 自分、このプロジェクトだけ       |
+| 4       | `.claude/settings.json`       | プロジェクトの全員（Gitで共有）  |
+| 5（低） | `~/.claude/settings.json`     | 自分、全プロジェクト             |
+
+同じキーは優先度の高い側の値が使われます。ただし `permissions.allow` のような配列は、上書きではなく結合されます。ファイルが読み込まれたかは `/status` の `Setting sources` で確認できます。
+
+### permissions：許可・確認・拒否
+
+```json
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": ["Bash(pnpm test *)"],
+    "ask": ["Bash(git push *)"],
+    "deny": ["Read(./.env)", "Bash(rm -rf *)"]
+  }
+}
+```
+
+`$schema` を書くとエディタが補完してくれます。ルールの要点です。
+
+- **評価順は deny、ask、allow。** 最初に一致したものが採用され、具体性は関係しません。広い deny に対して、狭い allow で例外は作れません
+- **末尾 `*` の前の空白に意味がある。** `Bash(ls *)` は `ls` と `ls -la` に一致し、`lsof` には一致しません。`Bash(ls*)` は `lsof` にも一致します
+- **引数を絞る Bash ルールは破られやすい。** 公式も、URLなどの引数を制限する書き方は想定外の書き方で素通りしうると注意しています。本当に止めたいものはフックも併用します
+- **`Read` ルールの対象。** `Read(./.env)` はClaudeのファイル読み取りを止めるルールです。`Bash` 経由で中身を出す操作は別物として扱われるため、必要なら `Bash` 側のルールやフックも足してください
+- **パスの書き方。** `./` はカレント基準、`~/` はホーム基準、ファイルシステムの絶対パスは `//Users/...` のように先頭にスラッシュ2つです。`/Users/...` は絶対パスにならないので注意
+
+`permissions.defaultMode` で起動時のモードも決められますが、`auto` と `bypassPermissions` はプロジェクト設定（`.claude/settings.json` など）からは効きません。
+
+### hooks：確実に実行する仕組み
+
+CLAUDE.md の指示は「参考情報」で、守られる保証はありません。必ず実行したい・必ず止めたいことはフックに任せます。構造は「イベント → matcher → 実行内容」の3段です。
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.mjs\"" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+- イベントの例: `PreToolUse`（ツール実行前）、`PostToolUse`（実行後）、`Stop`（応答を終える直前）
+- `matcher` はツール名で絞る。`Edit|Write` のように `|` で複数指定できる
+- フックはJSONを標準入力で受け取る。ツール系なら `tool_name` と `tool_input` が入っている
+- 終了コード `0` は成功、`2` はブロック（`PreToolUse` なら操作を止め、stderr が Claude に返る）、それ以外は非ブロックのエラー
+
+PostToolUse の `exit 2` は、すでに実行された操作を取り消せません。事前に止めるのは PreToolUse の役目です。また、PreToolUse フックが「許可」を返しても、deny ルールは優先されます。
+
+### env：環境変数
+
+`env` に書いた値は、セッションとそのサブプロセスの環境変数になります。
+
+```json
+{ "env": { "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "2" } }
+```
+
+Gitで共有する `.claude/settings.json` にAPIキーなどの秘密は書かないでください（理由は、リポジトリを見られる人全員に渡るためです）。
+
+## ハンズオン
+
+練習用フォルダで、`.env` の読み取りと `rm` を止める設定を作ります。
+
+1. フォルダと、止める対象のダミーファイルを作ります。
+
+   ```bash
+   mkdir settings-practice
+   cd settings-practice
+   mkdir -p .claude/hooks
+   echo "SECRET=dummy" > .env
+   ```
+
+2. `.claude/settings.json` を次の内容で作ります。
+
+   ```json
+   {
+     "permissions": {
+       "allow": ["Bash(git status *)"],
+       "deny": ["Read(./.env)"]
+     },
+     "hooks": {
+       "PreToolUse": [
+         {
+           "matcher": "Bash",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/no-rm.mjs\""
+             }
+           ]
+         }
+       ]
+     }
+   }
+   ```
+
+3. `.claude/hooks/no-rm.mjs` を作ります。
+
+   ```js
+   let data = '';
+   process.stdin.setEncoding('utf8');
+   process.stdin.on('data', (c) => (data += c));
+   process.stdin.on('end', () => {
+     const command = JSON.parse(data || '{}').tool_input?.command ?? '';
+     if (/\brm\b/.test(command)) {
+       console.error('rm は禁止されています。別の方法を提案してください');
+       process.exit(2);
+     }
+   });
+   ```
+
+4. `claude` を起動し、`/status` を実行します。
+   期待される結果: `Setting sources` に `Project settings` が出ます。出ない場合は一度 `/exit` して起動し直します。
+5. 次のように依頼します。
+
+   ```text
+   .env の中身を読んで教えて
+   ```
+
+   期待される結果: 読み取りが拒否されたという趣旨の応答になります。
+
+6. 続けて依頼します。
+
+   ```text
+   echo test > tmp.txt を作ってから、rm tmp.txt で消して
+   ```
+
+   期待される結果: `rm` の実行がブロックされ、フックの stderr のメッセージが Claude に伝わります。
+
+7. `/permissions` を開き、設定した `deny` ルールが一覧に出ることを確認します。
+
+## よくある失敗
+
+- **広すぎる allow を書く**
+  - 原因: 確認を減らしたくて `Bash(*)` や `Bash(git *)` のように書く
+  - 対処: コマンドと引数の形まで絞る（`Bash(git status *)` など）。`git push` のように取り消しにくい操作は `ask`、危険なものは `deny` に入れる
+- **フックを書いたのに動かない**
+  - 原因: JSONの文法ミス、`matcher` の不一致、スクリプトのパス間違い
+  - 対処: `/status` でファイルが読み込まれたか見て、`matcher` をツール名と合わせる。スクリプトを単体で実行して確認する
+- **PostToolUse で操作を止めようとする**
+  - 原因: PostToolUse はツール実行後のため、`exit 2` でも取り消せない
+  - 対処: 止めたい操作は PreToolUse で判定する
+- **Stop フックが無限ループする**
+  - 原因: 失敗のたびに `exit 2` で続行させ続ける
+  - 対処: 入力の `stop_hook_active` が `true` のときは何もせず終了する。公式は、連続で続行できる回数にも上限を設けています
+- **個人の設定をチーム共有ファイルに書いてコミットする**
+  - 原因: `.claude/settings.json` と `.claude/settings.local.json` の違いを知らない
+  - 対処: 個人の例外は `settings.local.json` に書く。手で作った場合は `.gitignore` に自分で追加する
+
+## 次へ
+
+次は [skills：手順を再利用する](/learn/intermediate/skills) です。毎回説明している作業手順を `SKILL.md` にまとめ、`/名前` で呼び出せるようにします。

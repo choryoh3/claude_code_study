@@ -62,3 +62,66 @@ terms:
   - term: セーフモード
     description: claude --safe-mode で起動する状態。CLAUDE.md、スキル、プラグイン、hooks、MCP サーバーなどが無効になり、原因の切り分けに使う。
     lesson: troubleshooting
+  - term: settings.json
+    description: Claude Code の動作を決める JSON の設定ファイル。個人用、プロジェクト共有用、自分だけの上書き用などがあり、優先度の高い側の値が使われる。
+    lesson: settings
+  - term: deny / ask / allow
+    description: 権限ルールの3種類。評価順は deny、ask、allow で、最初に一致したものが採用されるので、deny に対する例外は allow で作れない。
+    lesson: settings
+  - term: 終了コード
+    description: hook や外部コマンドが終わるときに返す数値。hook では 0 が成功、2 がブロック、それ以外は止まらないエラーになる。
+    lesson: settings
+  - term: frontmatter
+    description: ファイル先頭の --- で囲んだ YAML 形式の設定欄。スキルやサブエージェントの名前、説明、ツールなどをここに書く。
+    lesson: skills
+  - term: SKILL.md
+    description: スキルの本体になるファイル。名前のディレクトリの中に置き、呼び出されたときに本文が読み込まれる。
+    lesson: skills
+  - term: サブエージェント
+    description: 特定の役割を持つ別の AI アシスタント。独立したコンテキストで動き、メインの会話には結果の要約だけが返る。
+    lesson: subagents
+  - term: rules
+    description: .claude/rules/ に置く Markdown の規約ファイル。paths を書くと、一致するファイルを扱うときだけ読み込まれる。強制ではなく参考情報として扱われる。
+    lesson: rules
+  - term: glob
+    description: src/**/*.ts のように、ワイルドカードでファイルを指すパターン。rules の paths で対象を絞るのに使う。
+    lesson: rules
+  - term: MCP
+    description: Claude Code を外部のツールやデータにつなぐ共通の仕組み。つなぐ相手を MCP サーバーと呼び、そのツールを Claude が呼べるようになる。
+    lesson: mcp
+  - term: スコープ（local / project / user）
+    description: MCP サーバー設定の保存先と共有範囲。local は自分とそのプロジェクト、project は .mcp.json で Git 共有、user は自分の全プロジェクト。
+    lesson: mcp
+  - term: トランスポート
+    description: Claude と MCP サーバーの通信方法。手元のプロセスは stdio、リモートは http が推奨で、sse は非推奨。
+    lesson: mcp
+  - term: プロンプトインジェクション
+    description: 外部の文章に隠した指示で、Claude を意図しない動きに誘導する攻撃。外部コンテンツを取得する MCP サーバーや PR の本文で起こりうる。
+    lesson: mcp
+  - term: チェックポイント
+    description: Claude のファイル編集を記録し、/rewind で戻せるようにする仕組み。Bash コマンドによる変更は追跡されず、永続的な履歴は git に任せる。
+    lesson: git-workflow
+  - term: worktree
+    description: 同じリポジトリの別ブランチを別フォルダに同時に取り出す git の機能。履歴は共有しつつ、ファイルとブランチが独立するので並列作業で衝突しにくい。
+    lesson: worktree
+  - term: ヘッドレス実行
+    description: claude -p で対話画面を開かずに一度だけ実行し、結果を標準出力に出す使い方。スクリプトや CI から呼び出せる。
+    lesson: headless
+  - term: ハーネス
+    description: Claude が書いた変更を機械的に検証し、失敗したら自分で直せるようにする仕組み全体。検証コマンド、hooks、CI の3層で作る。
+    lesson: harness-engineering
+  - term: 自己検証ループ
+    description: テストなどの合否を Claude 自身が読み、失敗したら直して再実行する流れ。完了条件が終了コードで判定できると回る。
+    lesson: harness-engineering
+  - term: プロンプトキャッシュ
+    description: 繰り返し送る内容を安く処理する仕組み。有効期間を過ぎてから会話を再開すると、最初のメッセージで全体が再処理される。
+    lesson: cost-context
+  - term: 拡張思考
+    description: Claude が答える前に深く考える機能。思考のトークンは出力として課金されるので、簡単な作業では /effort で下げられる。
+    lesson: cost-context
+  - term: ガバナンス
+    description: 誰が何をできるかを、ルールと仕組みで決めて保つこと。共有設定はレビューで守り、強制したいものは管理設定で配る。
+    lesson: team-operations
+  - term: 管理設定
+    description: 組織が配布する最上位の設定。ユーザー、プロジェクト、コマンドラインの設定でも上書きできない。
+    lesson: team-operations
