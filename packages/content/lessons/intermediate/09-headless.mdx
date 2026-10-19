@@ -1,0 +1,176 @@
+---
+title: ヘッドレス実行
+level: intermediate
+order: 9
+summary: claude -p で対話画面なしに Claude Code を実行し、出力形式・ツール許可・継続・パイプ入力・CI での注意点を学ぶ。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: 結果を JSON で受け取り、スクリプトでセッション ID やコストを取り出したい。使うフラグはどれか。
+    choices:
+      - '`-p` だけで、出力は常に JSON になる'
+      - '`--output-format text`'
+      - '`--output-format json`'
+    answerIndex: 2
+    explanation: --output-format は text（既定）、json、stream-json から選びます。json にすると、結果は result フィールド、他にセッション ID やコストなどのメタデータが入ります。-p だけでは既定の text です。
+  - id: q2
+    prompt: 直前の会話の続きを、非対話でもう一度実行したい。公式の方法はどれか。
+    choices:
+      - claude -p "続きの指示" --continue
+      - claude -p "続きの指示" --history
+      - 同じ claude -p を実行すれば、自動で前回の続きになる
+    answerIndex: 0
+    explanation: --continue は直近の会話を続け、特定の会話は --resume にセッション ID を渡して続けます。何も付けない claude -p は、毎回新しい会話です。
+  - id: q3
+    prompt: claude -p でテストを実行して失敗を直させたい。ツールの確認プロンプトに答える人がいないとき、公式の例に沿った指定はどれか。
+    choices:
+      - プロンプトが出るたびに手で y を入力する
+      - '`--allowedTools "Bash,Read,Edit"` のように、使わせるツールを事前に許可する'
+      - '`-p` を付けると、すべてのツールが自動で許可される'
+    answerIndex: 1
+    explanation: --allowedTools で、確認なしに使えるツールを指定します。-p でもツール許可は自動にはなりません。許可は必要最小限にし、Bash は広い権限なので、範囲を絞った指定（Bash(git diff *) など）も使えます。
+  - id: q4
+    prompt: CI で claude -p を使うとき、公式が勧める、起動を速くして実行環境の差を減らす方法はどれか。
+    choices:
+      - '`--bare` を付ける。hooks、skills、MCP サーバー、auto memory、CLAUDE.md の自動読み込みを省く'
+      - '`--fast` を付ける'
+      - ホームの .claude を削除してから実行する
+    answerIndex: 0
+    explanation: --bare は、各マシンの設定が結果に影響しないようにするための推奨モードです。必要なものは --append-system-prompt や --mcp-config などで明示的に渡します。--bare では OAuth ログインを使わないため、API キーなどの認証情報を環境変数で渡します。
+  - id: q5
+    prompt: claude -p で、リポジトリの hooks や .mcp.json のサーバーはどう扱われるか。
+    choices:
+      - 信頼確認のダイアログが必ず出る
+      - 確認ダイアログは出ず、--bare を付けない限り、リポジトリの設定が読み込まれる
+      - -p では、プロジェクトの設定は一切読み込まれない
+    answerIndex: 1
+    explanation: 公式は、-p では信頼ダイアログもサーバー単位の承認プロンプトも出ないと説明しています。信頼できないリポジトリで実行する場合は、--bare や設定で読み込みを制限します。
+---
+
+## ゴール
+
+- `claude -p` で、対話画面なしに Claude Code を実行できる
+- 出力形式、ツール許可、継続・再開、パイプ入力を使い分けられる
+- スクリプトや CI から呼ぶときの安全面の注意を説明できる
+
+## 前提
+
+- Claude Code の基本操作と、権限モードを理解している
+- シェル（bash や PowerShell）でパイプ `|` を使ったことがある
+- 前のレッスン（worktree）の知識があるとよい。MCP のレッスンの承認の話も関連する
+
+## 解説
+
+### claude -p とは
+
+`-p`（`--print`）は、非対話モードの印です。プロンプトを渡し、答えを標準出力に出して終了します。公式はこれを「Agent SDK を CLI から使う形」と位置づけています。成功すると終了コード 0、失敗すると 0 以外で終わるので、スクリプトが分岐に使えます。
+
+```bash
+claude -p "What does the auth module do?"
+```
+
+### 出力形式
+
+| 値             | 内容                                                     |
+| -------------- | -------------------------------------------------------- |
+| `text`（既定） | 普通のテキスト                                           |
+| `json`         | 結果（`result`）、セッション ID、コストなどを含む JSON   |
+| `stream-json`  | 1 行 1 JSON のストリーム。`--verbose` などと組み合わせる |
+
+`--json-schema` を `json` と併用すると、スキーマに沿った出力が `structured_output` に入ります。
+
+### ツールの許可
+
+対話の確認ができないので、使わせるツールを前もって指定します。
+
+```bash
+claude -p "Run the test suite and fix any failures" --allowedTools "Bash,Read,Edit"
+```
+
+`--allowedTools` は権限ルールの構文を使います。`Bash(git diff *)` の末尾の空白と `*` が前方一致です。ほかに `--permission-mode` で `acceptEdits`、`dontAsk`（確認が要る操作はすべて拒否。CI 向き）、`auto` などを選べます。使える値と挙動は、バージョンで変わりうるため公式で確認してください。
+
+### 継続・再開・パイプ
+
+```bash
+claude -p "Review this codebase for performance issues"
+claude -p "Now focus on the database queries" --continue
+```
+
+特定の会話は、JSON の `session_id` を取り出して `--resume` に渡します。標準入力も読めます（上限 10MB）。
+
+```bash
+git log --oneline -20 | claude -p "summarize these recent commits"
+```
+
+### CI での注意
+
+- `--bare` を付けると、hooks・skills・MCP・auto memory・CLAUDE.md の自動探索を省き、マシン差を減らせます。公式は、スクリプト用途で推奨しています
+- `--bare` は購読のログインを使いません。`ANTHROPIC_API_KEY` などを環境変数で渡します。キーはログやコードに書かない
+- `--bare` なしの `-p` は、信頼ダイアログも MCP の承認も出さずに、リポジトリの hooks と `.mcp.json` を読み込みます。信頼できないコードのレビューには要注意です
+- 必要な設定は `--append-system-prompt`、`--mcp-config`、`--settings` で明示します
+
+## ハンズオン
+
+1. まず、簡単な質問を非対話で実行します。
+
+   ```bash
+   claude -p "このリポジトリの目的を2文で説明して"
+   ```
+
+   期待される結果：答えが標準出力に出て、プロンプトに戻ります。
+
+2. JSON で受け取り、`result` を取り出します。
+
+   ```bash
+   # macOS / Linux（jq が必要）
+   claude -p "Summarize this project" --output-format json | jq -r '.result'
+   ```
+
+   ```powershell
+   # Windows (PowerShell)
+   (claude -p "Summarize this project" --output-format json | ConvertFrom-Json).result
+   ```
+
+   期待される結果：要約のテキストだけが表示されます。
+
+3. パイプ入力を試します。
+
+   ```bash
+   git log --oneline -20 | claude -p "summarize these recent commits"
+   ```
+
+   期待される結果：直近のコミットの要約が出ます。
+
+4. 続きを実行します。
+
+   ```bash
+   claude -p "気になる点を1つ挙げて"
+   claude -p "それを直すとしたら、どの手順?" --continue
+   ```
+
+   期待される結果：2 回目が、1 回目の回答を踏まえた内容になります。
+
+5. 読み取り専用で許可を絞った実行を試します。
+
+   ```bash
+   claude -p "README.md を読んで、誤字を報告して" --allowedTools "Read"
+   ```
+
+   期待される結果：確認プロンプトなしでファイルを読み、報告します。編集は許可していないので、書き換えは行われません。
+
+## よくある失敗
+
+- **`-p` なら安全だと思い、信頼できないリポジトリで実行する**
+  原因：`-p` は信頼ダイアログと MCP の承認を出さない。対処：知らない人のコードは `--bare` を付け、必要なものだけ明示して渡す。
+- **`--allowedTools "Bash"` と広く許可する**
+  原因：確認が面倒で全部許可した。対処：`Bash(git diff *)` のようにコマンド単位で指定する。CI 向けには `--permission-mode dontAsk` も検討する。
+- **API キーをスクリプトに直書きしてコミットする**
+  原因：`--bare` では環境変数の認証が必要。対処：CI のシークレット機能から環境変数で渡す。
+- **JSON の抽出が Windows で動かない**
+  原因：`jq` が入っていない、またはシェルの引用符の規則が違う。対処：PowerShell の `ConvertFrom-Json` を使う。引用符は二重引用符で書くと移植しやすい。
+- **`--continue` が別の会話を続けてしまう**
+  原因：`--continue` は直近の会話を続けるため、並行して複数走らせると取り違える。対処：`session_id` を取り出して `--resume` を使う。
+
+## 次へ
+
+次は [並列実装](/learn/advanced/parallel-implementation) です。ここまでの worktree と非対話実行を土台に、複数の実装を並列に進める上級のレッスンに進みます。

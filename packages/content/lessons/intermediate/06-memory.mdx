@@ -1,0 +1,147 @@
+---
+title: 'メモリ：覚えさせる・忘れさせる'
+level: intermediate
+order: 6
+summary: auto memory の保存場所と読み込みの仕組みを理解し、CLAUDE.md との使い分けと、見直し・削除の方法を身につける。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: auto memory について正しい説明はどれか。
+    choices:
+      - Claude が自分で書くメモで、プロジェクトごとのフォルダに保存される。MEMORY.md が索引になる
+      - あなたが書く指示ファイルで、チームに Git で共有される
+      - 一度オフにすると、環境変数でもオンに戻せない
+    answerIndex: 0
+    explanation: auto memory は Claude が書くメモで、保存先は ~/.claude/projects/ 以下のプロジェクトごとのフォルダです。マシン内に保存され、チームには共有されません。オン・オフは /memory のトグルや設定、環境変数で切り替えます。
+  - id: q2
+    prompt: MEMORY.md が長くなりすぎるとどうなるか。
+    choices:
+      - 全体が毎回読み込まれるので、長さは問題にならない
+      - 先頭の約 200 行または 25KB までが起動時に読み込まれ、それ以降は読み込まれない
+      - 古い行から自動で削除される
+    answerIndex: 1
+    explanation: 起動時に読み込まれるのは MEMORY.md の最初の 200 行か 25KB のどちらか早い方までです。詳細はトピックファイルに分けて、MEMORY.md は索引として短く保つ設計です。自動で古い行が消えるとは説明されていません。
+  - id: q3
+    prompt: 同じ git リポジトリで worktree を 3 つ作って作業した。auto memory はどうなるか。
+    choices:
+      - worktree ごとに別々の auto memory が作られる
+      - 最初の worktree だけが auto memory を使える
+      - 同じリポジトリの worktree は、1 つの auto memory フォルダを共有する
+    answerIndex: 2
+    explanation: auto memory のフォルダはリポジトリから決まるため、同じ git リポジトリ内の worktree とサブディレクトリは 1 つを共有します。一方、gitignore された CLAUDE.local.md は作った worktree にしか存在しない点と混同しないでください。
+  - id: q4
+    prompt: 「このコマンドは必ずコミット前に実行して」という約束を確実に守らせたい。公式の考え方に最も近いのはどれか。
+    choices:
+      - CLAUDE.md に書いておけば強制される
+      - auto memory に覚えさせれば強制される
+      - 確実に実行させたい処理は hooks で書く。CLAUDE.md や memory は参考情報として扱われる
+    answerIndex: 2
+    explanation: CLAUDE.md も auto memory も、Claude にとってはコンテキストであり強制ではありません。特定のタイミングで必ず実行したい処理は hooks にします。
+---
+
+## ゴール
+
+- CLAUDE.md と auto memory の役割の違いを説明できる
+- auto memory の保存場所を開き、内容を確認・編集・削除できる
+- 読み込まれる範囲（階層・サイズ・worktree）を把握し、不要なものを除外できる
+
+## 前提
+
+- 基礎レッスン「CLAUDE.md」を終えている（置き場所と `/init`、`/context` の基本は繰り返しません）
+- `/memory` を一度開いたことがある
+
+## 解説
+
+### 2 つのメモリの違い
+
+基礎で学んだ CLAUDE.md に加えて、Claude が自分で書く auto memory があります。どちらもセッション開始時に読み込まれ、Claude には「参考情報」として渡されます。強制力はありません。
+
+|        | CLAUDE.md                    | auto memory                         |
+| ------ | ---------------------------- | ----------------------------------- |
+| 書く人 | あなた                       | Claude                              |
+| 内容   | 指示とルール                 | 学んだ傾向や、あなたの訂正          |
+| 範囲   | プロジェクト、ユーザー、組織 | リポジトリごと（worktree 間で共有） |
+
+auto memory の記録は 4 種類（`user`、`feedback`、`project`、`reference`）で、コードから分かること、すでに CLAUDE.md に書いてあることは記録しません。毎回何かを保存するわけでもありません。
+
+### 保存場所と読み込み
+
+保存先は `~/.claude/projects/<project>/memory/` です。`<project>` は git リポジトリから決まるので、同じリポジトリの worktree とサブディレクトリは 1 つのフォルダを共有します。マシン内のファイルで、他のマシンやクラウド環境とは共有されません。
+
+```text
+~/.claude/projects/<project>/memory/
+├── MEMORY.md            # 索引。1 行 1 メモ。毎回読み込まれる
+├── feedback_testing.md  # 個別のメモ（ファイル名は例）
+└── ...
+```
+
+- 起動時に読み込まれるのは `MEMORY.md` の最初の 200 行か 25KB の早い方まで
+- 個別のメモは起動時には読まれず、必要なときに Claude が読む
+- 通常の古いセッション履歴は一定期間後に削除されるが、memory ファイルはその対象外
+
+### 管理方法
+
+- `/memory`：CLAUDE.md の場所一覧、auto memory のオン/オフ、auto memory フォルダを開く操作
+- 「X を覚えて」と頼むと auto memory に、「CLAUDE.md に追加して」と頼むと CLAUDE.md に書かれる
+- 全体を切る：`/memory` のトグル（ユーザー設定の `autoMemoryEnabled` に保存）、または環境変数 `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`
+- プロジェクト単位で切る：そのプロジェクトの設定に `"autoMemoryEnabled": false`
+- 保存先を変える：設定の `autoMemoryDirectory`（絶対パスか `~/` 始まり）
+
+中身はただの Markdown なので、エディタで直接編集・削除できます。
+
+### CLAUDE.md の読み込みの補足
+
+- 作業ディレクトリと、その上位ディレクトリの CLAUDE.md が起動時に連結される。ファイルシステムのルートに近いものが先、作業ディレクトリに近いものが後に並ぶ
+- `@path` で別ファイルを取り込める（相対パスは、書いたファイルからの相対）。最大 4 段まで再帰する
+- `/compact` の後もプロジェクト直下の CLAUDE.md は再読込される。会話の中だけで伝えた指示は消えうる
+- 他チームの CLAUDE.md を拾ってしまう大規模リポジトリでは、設定の `claudeMdExcludes` で除外できる
+- リポジトリに `AGENTS.md` があり CLAUDE.md が無い場合は、バージョンによって `AGENTS.md` が読まれる。仕様はバージョン依存なので、公式ページで確認する
+
+## ハンズオン
+
+1. `claude` を起動し、覚えさせたい好みを伝えます。
+
+   ```text
+   このプロジェクトでは、回答の最後に必ず次の作業の提案を1行付けるよう覚えて
+   ```
+
+   期待される結果：「Saved 1 memory」のような表示が出ることがあります。毎回保存されるわけではなく、Claude が判断します。
+
+2. `/memory` を実行し、auto memory のフォルダを開く項目を選びます。
+
+   期待される結果：`MEMORY.md` と、必要に応じて個別のメモのファイルが見えます。
+
+3. フォルダの場所を、シェルからも確認します。
+
+   ```bash
+   # macOS / Linux
+   ls ~/.claude/projects/
+   ```
+
+   ```powershell
+   # Windows (PowerShell)
+   Get-ChildItem $HOME\.claude\projects
+   ```
+
+   期待される結果：プロジェクトごとのフォルダが並びます。その中に `memory` があります。
+
+4. 不要なメモを、ファイルの削除か編集で消します。`MEMORY.md` の該当の 1 行も消して、索引と中身をそろえます。
+
+5. 新しいセッションを開いて `/context` を実行し、`CLAUDE.md` が **Memory files** に出ることを確認します。
+
+## よくある失敗
+
+- **auto memory が CLAUDE.md の代わりになると思う**
+  原因：どちらも「覚える」ので同じに見える。対処：チームで共有すべき規約は CLAUDE.md、個人の好みや訂正は auto memory と分ける。
+- **秘密情報や個人情報を「覚えて」と頼む**
+  原因：memory は平文のファイルとしてマシンに残る。対処：パスワードやトークンは頼まない。うっかり保存されたら `/memory` から開いて削除する。
+- **MEMORY.md が肥大して後半が読まれない**
+  原因：200 行または 25KB を超えた部分は起動時に読まれない。対処：1 行 1 メモに保ち、詳細は個別ファイルへ移して、古いものを消す。
+- **古い記録が指示と食い違う**
+  原因：CLAUDE.md と memory の内容が矛盾すると、Claude はどちらかを選ぶことがある。対処：古い方を消す。確認には `/doctor prompt-audit` もある（新しめの機能なので、使えるかはバージョン次第）。
+- **worktree で `CLAUDE.local.md` が効かない**
+  原因：gitignore されたファイルは、作った worktree にしか存在しない。対処：ホームに共通ファイルを置き、`@~/.claude/...` で取り込む。初回は外部取り込みの承認ダイアログが出る。
+
+## 次へ
+
+次は [gitワークフロー](/learn/intermediate/git-workflow) です。Claude Code にコミットと PR を作らせるときの頼み方と、確認すべき点を学びます。

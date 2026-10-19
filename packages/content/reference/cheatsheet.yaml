@@ -170,3 +170,168 @@ sections:
       - term: 200 行未満
         description: CLAUDE.md の長さの目安。長いと指示が守られにくくなるので、具体的で短い指示だけを書く。
         lesson: claude-md
+  - id: settings
+    title: 設定とhooks
+    items:
+      - term: '~/.claude/settings.json'
+        description: 自分の全プロジェクトに効く個人設定。優先度は最も低い。
+        lesson: settings
+      - term: .claude/settings.json
+        description: プロジェクトの全員に効く設定。Git にコミットして共有する。
+        lesson: settings
+      - term: .claude/settings.local.json
+        description: 自分だけ、そのプロジェクトだけの上書き設定。手で作った場合は .gitignore に自分で追加する。
+        lesson: settings
+      - term: permissions.allow / ask / deny
+        description: 許可・確認・拒否のルール。評価順は deny、ask、allow で、最初に一致したものが採用される。
+        lesson: settings
+      - term: 'Bash(ls *)'
+        description: Bash の権限ルールの書き方。`*` の前の空白に意味があり、ls と ls -la に一致して lsof には一致しない。
+        lesson: settings
+      - term: hooks
+        description: イベント、matcher、実行内容の3段で書く設定キー。必ず実行したい処理や確実に止めたい操作を任せる。
+        lesson: settings
+      - term: PreToolUse
+        description: ツール実行の前に動く hook のイベント。exit 2 で操作を止められる。PostToolUse は実行後なので止められない。
+        lesson: settings
+      - term: exit 2
+        description: hook の終了コード。ブロックできるイベントでは操作を止め、stderr の内容が Claude に返る。exit 1 では止まらない。
+        lesson: harness-engineering
+      - term: stop_hook_active
+        description: Stop hook の入力に入る値。true なら続行中なので、何もせず終了して無限ループを防ぐ。
+        lesson: harness-engineering
+      - term: env
+        description: 設定ファイルのキー。書いた値がセッションとそのサブプロセスの環境変数になる。共有ファイルに秘密は書かない。
+        lesson: settings
+  - id: extensions
+    title: skills・subagents・rules
+    items:
+      - term: '.claude/skills/<name>/SKILL.md'
+        description: プロジェクト用スキルの置き場所。名前のディレクトリを作り、その中に SKILL.md を置く。個人用は ~/.claude/skills/ に置く。
+        lesson: skills
+      - term: 'disable-model-invocation: true'
+        description: スキルの frontmatter。Claude の自動起動を止め、人が /名前 で呼んだときだけ動かす。デプロイなど副作用のある手順向け。
+        lesson: skills
+      - term: $ARGUMENTS
+        description: スキル本文のプレースホルダ。/名前 の後ろに入力した引数がそのまま入る。
+        lesson: skills
+      - term: allowed-tools
+        description: スキルの frontmatter。確認なしで使えるツールを指定する。制限ではないので、制限には disallowed-tools を使う。
+        lesson: custom-skill-agent
+      - term: '.claude/agents/<name>.md'
+        description: サブエージェントの定義ファイル。本文がシステムプロンプトになり、name と description が必須。
+        lesson: subagents
+      - term: tools
+        description: サブエージェントが使えるツールの許可リスト。省略すると、使えるツールをすべて引き継ぐ。
+        lesson: subagents
+      - term: disallowedTools
+        description: サブエージェントの拒否リスト。tools より先に適用される。
+        lesson: subagents
+      - term: claude --agent
+        description: 指定したサブエージェントとして、セッション全体を動かして起動する。
+        lesson: subagents
+      - term: .claude/rules/
+        description: トピックごとの規約を Markdown で置くフォルダ。paths を書かないファイルは起動時に毎回読み込まれる。
+        lesson: rules
+      - term: paths
+        description: rule の frontmatter で Claude Code が読む唯一の項目。glob パターンを書き、一致するファイルを扱うときだけ読み込む。
+        lesson: rules
+  - id: mcp
+    title: MCP
+    items:
+      - term: 'claude mcp add --transport http <name> <url>'
+        description: リモートの HTTP サーバーを追加する。リモートではこの方式が推奨されている。
+        lesson: mcp
+      - term: 'claude mcp add <name> -- <command> [args...]'
+        description: 手元で起動する stdio サーバーを追加する。-- の後ろがそのまま起動コマンドになる。
+        lesson: mcp
+      - term: --scope
+        description: 保存先を local、project、user から選ぶ。既定は local で、チームに共有するなら project を指定する。
+        lesson: mcp
+      - term: .mcp.json
+        description: project スコープのサーバー設定ファイル。Git で共有されるので、秘密は直接書かない。
+        lesson: mcp
+      - term: '${VAR}'
+        description: .mcp.json の command や url などで使える環境変数の展開。秘密の値はこれで渡す。
+        lesson: mcp
+      - term: claude mcp list
+        description: 登録済みサーバーと、Connected や Pending approval などの状態を一覧する。
+        lesson: mcp
+      - term: claude mcp reset-project-choices
+        description: project スコープのサーバーについて、承認や拒否の選択をやり直す。
+        lesson: mcp
+      - term: /mcp
+        description: セッション内で、各サーバーの状態、認証、再接続、無効化を操作する。使っていないサーバーを無効にするのにも使う。
+        lesson: cost-context
+      - term: disabledMcpjsonServers
+        description: .mcp.json のうち読み込みたくないサーバーを入れる設定。claude -p では承認なしで読み込まれるので、その抑制に使う。
+        lesson: mcp
+      - term: MCP_TIMEOUT
+        description: MCP サーバーの起動タイムアウトをミリ秒で調整する環境変数。ツールの実行時間は MCP_TOOL_TIMEOUT で調整する。
+        lesson: build-mcp
+  - id: automation
+    title: ヘッドレス・git・worktree
+    items:
+      - term: claude -p
+        description: 対話画面を開かず、答えを標準出力に出して終了する。成功なら終了コード 0 なのでスクリプトで分岐に使える。
+        lesson: headless
+      - term: --output-format
+        description: 出力形式を text、json、stream-json から選ぶ。json にすると result やセッション ID、コストが取り出せる。
+        lesson: headless
+      - term: --allowedTools
+        description: 確認なしで使わせるツールを権限ルールの構文で指定する。Bash 全体ではなく Bash(git diff *) のように絞る。
+        lesson: headless
+      - term: --continue / --resume
+        description: 非対話でも会話を続ける。--continue は直近の会話、--resume はセッション ID で特定の会話を指す。
+        lesson: headless
+      - term: 'git log --oneline -20 | claude -p ...'
+        description: 標準入力にパイプで渡した内容を読ませる。入力の上限は 10MB。
+        lesson: headless
+      - term: claude --from-pr
+        description: PR に紐づいたセッションを絞り込んで選ぶ。gh pr create で作った PR のセッションに戻れる。
+        lesson: git-workflow
+      - term: claude --worktree <name>
+        description: .claude/worktrees/<name>/ に worktree-<name> ブランチで作業場所を作って起動する。-w でも同じ。
+        lesson: worktree
+      - term: .worktreeinclude
+        description: worktree にコピーする gitignore 済みファイル（.env など）を書く。手動の git worktree add には効かない。
+        lesson: worktree
+      - term: worktree.baseRef
+        description: 新しい worktree の起点を決める設定。既定はリモートの既定ブランチで、head にすると現在の作業から分岐する。
+        lesson: parallel-implementation
+      - term: git worktree remove
+        description: 不要になった worktree を片付ける。フォルダだけ消すと git に登録が残る。
+        lesson: worktree
+  - id: operations
+    title: CI・コスト・チーム運用
+    items:
+      - term: --bare
+        description: hooks、skills、MCP、auto memory、CLAUDE.md の自動読み込みを省く。CI でマシン差を減らすために使い、認証は API キーなどを環境変数で渡す。
+        lesson: ci-integration
+      - term: --permission-mode dontAsk
+        description: 確認が必要な操作をすべて拒否する。人がいない CI に向く。
+        lesson: ci-integration
+      - term: /install-github-app
+        description: GitHub App のインストール、シークレット登録、ワークフローの PR 作成までを案内する。
+        lesson: ci-integration
+      - term: anthropics/claude-code-action
+        description: Claude Code を GitHub Actions に組み込む公式 Action。@claude メンションや prompt 指定で動く。
+        lesson: ci-integration
+      - term: ANTHROPIC_API_KEY
+        description: API キーを渡すシークレット名。コードやログに書かず、GitHub Secrets から渡す。
+        lesson: ci-integration
+      - term: --max-turns
+        description: 反復回数に上限を付けて暴走を防ぐ。ジョブの timeout-minutes と concurrency も併用する。
+        lesson: ci-integration
+      - term: /usage
+        description: セッションのトークン使用量と金額の見積りを表示する。別名は /cost で、請求の正式な値ではない。
+        lesson: cost-context
+      - term: /effort
+        description: 思考量を調整する。簡単な作業で下げると消費を抑えられるが、モデルによってはオフにできない。
+        lesson: cost-context
+      - term: managed-settings.json
+        description: 組織が配布する管理設定のファイル。ユーザー、プロジェクト、コマンドラインのどの設定でも上書きできない。
+        lesson: team-operations
+      - term: allowManagedPermissionRulesOnly
+        description: 権限ルールを管理設定のものだけにする制御キー。hooks と MCP にも、同様に制限するキーがある。
+        lesson: team-operations

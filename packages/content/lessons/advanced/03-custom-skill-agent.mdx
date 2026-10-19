@@ -1,0 +1,178 @@
+---
+title: 'カスタムskill・agentの設計'
+level: advanced
+order: 3
+summary: 'description の書き方、ツール権限の最小化、責務の絞り方、評価と改善の進め方を押さえて、使われる skill と subagent を設計する。'
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: skill の frontmatter にある `allowed-tools` の説明として正しいものはどれか。
+    choices:
+      - skill が使えるツールを、ここに書いたものだけに制限する
+      - skill の実行中、ここに書いたツールを確認なしで使える。ツールを禁止する設定ではない
+      - skill を呼び出せるユーザーを制限する
+    answerIndex: 1
+    explanation: 公式では `allowed-tools` は「その skill を呼び出したターンで、確認なしに使えるツール」です。制限ではありません。ツールを取り除きたいときは `disallowed-tools` を使います。
+  - id: q2
+    prompt: Claude に自動で選ばれやすい description の書き方はどれか。
+    choices:
+      - '「コードのレビューをします」とだけ短く書く'
+      - 何をするかと、どんな依頼のときに使うかを、具体的な言い回しとともに書く
+      - skill の手順の詳細をすべて description に書く
+    answerIndex: 1
+    explanation: 公式は、何をするかと、起動のきっかけになる言い回しの両方を書くよう勧めています。曖昧だと選ばれない・誤って選ばれます。手順の詳細は本文に書きます。description は一覧に常に載るうえ、長いと切り詰められます。
+  - id: q3
+    prompt: デプロイやコミットのような副作用のある skill を、ユーザーが明示したときだけ動かしたい。どの設定が適切か。
+    choices:
+      - '`user-invocable: false`'
+      - '`context: fork`'
+      - '`disable-model-invocation: true`'
+    answerIndex: 2
+    explanation: '`disable-model-invocation: true` にすると、ユーザーが `/skill-name` で呼んだときだけ動き、Claude は自動では呼べません。`user-invocable: false` は逆に、ユーザーのメニューから隠して Claude だけが使えるようにする設定です。'
+  - id: q4
+    prompt: レビュー専用の subagent を安全に作りたい。frontmatter の設計として最も適切なものはどれか。
+    choices:
+      - '`tools: Read, Glob, Grep` のように、必要最小限のツールだけを許可する'
+      - ツールは指定せず、本文に「ファイルは編集しないこと」と書くだけにする
+      - '`tools` に使えそうなツールをすべて並べておく'
+    answerIndex: 0
+    explanation: '`tools` は許可リストなので、必要なものだけを書くのが最小権限です。本文の指示は守られない可能性があり、強制ではありません。ツールを並べすぎると、意図しない書き込みや実行が可能になります。'
+---
+
+## ゴール
+
+- skill と subagent の役割の違いを説明できる
+- 自動で選ばれる description を書ける
+- ツール権限を最小にし、責務を 1 つに絞った定義を作れる
+- 作った定義を評価して改善できる
+
+## 前提
+
+- 中級で skill と subagent の基本（作り方、置き場所）を学んでいる
+- 前のレッスンで、hooks とテストによるハーネスの考え方を理解している
+
+## 解説
+
+### skill と subagent の使い分け
+
+|          | skill                                        | subagent                                                   |
+| -------- | -------------------------------------------- | ---------------------------------------------------------- |
+| 実体     | `.claude/skills/<name>/SKILL.md`             | `.claude/agents/<name>.md`                                 |
+| 動く場所 | 基本は今の会話の中                           | 独立したコンテキストで実行                                 |
+| 向く用途 | 手順・知識・定型作業を、必要なときに読み込む | 調査やレビューなど、大量の出力を隠して要約だけ返したい作業 |
+
+公式では、subagent は独自のコンテキスト・システムプロンプト・ツール権限・権限設定を持ち、元の会話の履歴は見えません。そのため、渡す指示は単体で完結させます。
+
+### description が「いつ選ばれるか」を決める
+
+Claude は、skill の `name` と `description` の一覧を見て、必要なときだけ本文を読み込みます。subagent も、依頼内容と `description` で委任先を判断します。つまり description は、自動で選ばれるための唯一の手がかりです。
+
+書き方の指針（公式の記述に基づく）は次のとおりです。
+
+- 何をするかと、どんな依頼のときに使うかの両方を書く
+- 起動のきっかけになる言い回しを入れる（例: 「差分を確認したいとき」「コミットメッセージを頼まれたとき」）
+- subagent には「use proactively」のような表現で、積極的な委任を促せる
+- skill では、`description` と `when_to_use` を合わせて 1,536 文字で切り詰められるので、重要な用途を先頭に書く
+- すべての非組み込み subagent の description の合計が約 15,000 トークンを超えると、起動時に警告が出る。短く保つ
+
+### 権限は最小にする
+
+- subagent の `tools` は許可リスト、`disallowedTools` は拒否リスト。レビューや調査は、読み取り系のツールだけにする
+- skill の `allowed-tools` は「確認なしで使えるツール」であり、制限ではない。制限したいときは `disallowed-tools` を使う
+- 副作用のある skill（デプロイ、コミット、メッセージ送信）には `disable-model-invocation: true` を付ける
+
+このリポジトリの `reviewer` agent は `tools: Read, Glob, Grep, Bash` で、本文に「ファイルは編集しない」と書いています。ただし `Bash` を許可しているので、これは書き込みを技術的に防ぐ強制ではなく、指示です。確実に防ぎたいなら、`Bash` を外すか、権限設定や hooks で補います。差分を見るために `git diff` が必要だ、というトレードオフの結果です。
+
+### 責務を 1 つに絞る
+
+- 1 つの定義には 1 つの仕事だけを持たせる（「レビュー」と「修正」を 1 つにしない）
+- subagent の本文は、判断基準・出力形式・やってはいけないことを具体的に書く
+- skill の `SKILL.md` は 500 行程度までに収める。詳細は別ファイルに分け、そこへのリンクを書く。読み込まれた本文は会話の間ずっとコンテキストを使い続ける
+
+### 評価と改善の進め方
+
+定義は書いて終わりではなく、試して直します。公式も「skill あり・なしで、新しいセッションで現実的な依頼を試す」ことを勧めています。
+
+1. 起動すべき依頼を 3〜5 個、起動すべきでない依頼を 2〜3 個用意する
+2. 新しいセッションで、それぞれを試す
+3. 起動しなかった → description に、依頼の言い回しを足す
+4. 誤って起動した → description の範囲を狭め、否定の条件を足す
+5. 結果の質が低い → 本文に判断基準と出力形式を足す。変更は 1 度に 1 点だけにする
+
+## ハンズオン
+
+1. skill を作ります。`.claude/skills/summarize-changes/SKILL.md` に、次の内容を保存します（公式のドキュメントの例に沿っています）。
+
+   ```markdown
+   ---
+   name: summarize-changes
+   description: Summarizes uncommitted changes and flags risky ones. Use when the user asks what changed, wants a commit message, or asks to review their diff.
+   allowed-tools: Bash(git diff *) Bash(git status *)
+   ---
+
+   ## Current changes
+
+   !`git diff HEAD`
+
+   ## Instructions
+
+   Summarize the changes above in two or three bullet points, then list any risks.
+   If the diff is empty, say there are no uncommitted changes.
+   ```
+
+2. 読み取り専用の subagent を作ります。`.claude/agents/diff-reviewer.md` に保存します。
+
+   ```markdown
+   ---
+   name: diff-reviewer
+   description: Reviews a git diff for bugs and missing tests. Use proactively after code changes, before committing.
+   tools: Read, Glob, Grep
+   ---
+
+   You are an independent code reviewer. You only read; you never edit files.
+   List findings as high / medium / low with file path and reason.
+   If there is nothing to report, say so explicitly.
+   ```
+
+3. `.claude/agents/` ディレクトリを新しく作った場合は、Claude Code を起動し直します（公式の仕様）。作成済みの場合は数秒で反映されます。
+
+4. 適当なファイルを 1 行変更してから、skill を明示的に呼んで動作を確認します。
+
+   ```text
+   /summarize-changes
+   ```
+
+   期待される結果：差分が数行に要約され、リスクが列挙されます。
+
+5. 自動で選ばれるかを確かめます。新しいセッションで次のように頼みます。
+
+   ```text
+   今の変更を確認して、コミットメッセージ案を出して
+   ```
+
+   期待される結果：Claude が `summarize-changes` を読み込んで使います。使われなければ、description に言い回しを足して再試行します。
+
+6. subagent を明示的に呼びます。
+
+   ```text
+   diff-reviewer subagent で、今の変更をレビューして
+   ```
+
+   期待される結果：指摘が重大度別に返ります。編集系のツールがないため、ファイルは変更されません。
+
+## よくある失敗
+
+- **skill が自動で選ばれない**
+  原因：description が曖昧、または用途の言い回しがない。対処：「何をするか」と「どんな依頼で使うか」を具体的に書き、重要な点を先頭に置く。
+- **`allowed-tools` で制限したつもりになる**
+  原因：`allowed-tools` は確認なしで使えるツールの指定で、制限ではない。対処：制限は `disallowed-tools`（skill）や `tools`（subagent）で行う。
+- **frontmatter のキーを間違えて効かない**
+  原因：公式は、認識されないフィールド名は黙って無視されると説明している。ハイフンの有無（`allowed-tools`）や camelCase（`disallowedTools`）も含めて、名前が完全に一致する必要がある。対処：公式の表と照らして綴りを確認する。
+- **何でもできる万能 agent を作る**
+  原因：責務を分けず、`tools` も広い。対処：レビュー・調査・修正を別の定義に分け、それぞれ最小の権限にする。
+- **副作用のある skill を Claude が勝手に実行する**
+  原因：自動起動が有効のまま。対処：`disable-model-invocation: true` を付け、ユーザーが `/skill-name` で呼ぶようにする。
+
+## 次へ
+
+次は [MCPサーバーを自作する](/learn/advanced/build-mcp) です。skill や subagent では届かない外部システムとの接続を、TypeScript で最小の MCP サーバーとして作ります。

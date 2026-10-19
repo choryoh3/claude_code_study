@@ -1,0 +1,168 @@
+---
+title: 'worktree：作業を分離する'
+level: intermediate
+order: 8
+summary: git worktree の基本と claude --worktree による並列セッションの分離、後片付けと注意点を学ぶ。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: claude --worktree feature-auth を実行したとき、既定で作られるものはどれか。
+    choices:
+      - リポジトリ直下の .claude/worktrees/feature-auth/ に、worktree-feature-auth という新しいブランチの worktree
+      - リポジトリの親フォルダに、feature-auth という名前のクローン
+      - 現在のブランチ上で、作業ツリーをそのまま使い回すセッション
+    answerIndex: 0
+    explanation: 公式では、既定で .claude/worktrees/<name>/ に、worktree-<name> という新しいブランチで作られると説明されています。クローンではなく、同じリポジトリの履歴を共有する別の作業ディレクトリです。
+  - id: q2
+    prompt: worktree を作った直後に、.env や node_modules が見当たらない。理由として正しいのはどれか。
+    choices:
+      - Claude Code のバグなので、再インストールが必要
+      - worktree は新しいチェックアウトで、git 管理されていないファイルは含まれない。依存のインストールや .worktreeinclude で用意する
+      - worktree は読み取り専用なので、ファイルは作れない
+    answerIndex: 1
+    explanation: worktree は追跡ファイルだけのまっさらなチェックアウトです。依存は worktree 内で入れ直し、gitignore されたファイルは .worktreeinclude に書くと自動でコピーされます。
+  - id: q3
+    prompt: 同じ git リポジトリで複数の worktree を使うとき、共有されるものはどれか。
+    choices:
+      - 作業ツリーのファイルと、未コミットの変更
+      - ブランチ。2 つの worktree で同じブランチを同時に使える
+      - リポジトリの .git ディレクトリ（履歴とリモート）と、auto memory のフォルダ
+    answerIndex: 2
+    explanation: 作業ツリーのファイルとブランチは worktree ごとに独立します。履歴を持つ .git ディレクトリと、リポジトリ単位の auto memory は共有されます。なお git は、通常、1 つのブランチを複数の worktree で同時にチェックアウトすることを許しません。
+  - id: q4
+    prompt: worktree が不要になったときの片付けとして適切なのはどれか。
+    choices:
+      - git worktree remove で削除し、不要ならブランチも削除する
+      - フォルダをエクスプローラーや rm -rf で消すだけで十分
+      - 何もしなくても、すべて自動で消える
+    answerIndex: 0
+    explanation: 手動で作った worktree は git worktree remove で外します。フォルダだけ消すと git 側に登録が残ります。Claude Code が作った worktree も、作業が残っていれば自動では消されず、非対話の -p 実行では自動クリーンアップがありません。
+---
+
+## ゴール
+
+- git worktree の考え方を説明できる
+- `claude --worktree` で、並列セッションを互いに干渉しないように起動できる
+- 後片付けと、worktree 特有の落とし穴（依存・`.env`・共有されるもの）を把握する
+
+## 前提
+
+- git のブランチとコミットを理解している
+- リポジトリに少なくとも 1 つコミットがある（worktree は既存のコミットから作られる）
+- 前のレッスン（gitワークフロー）の流れを知っている
+
+## 解説
+
+### git worktree とは
+
+git worktree は、同じリポジトリから「別のブランチを別のフォルダに同時にチェックアウトする」仕組みです。履歴とリモートは共有しつつ、ファイルとブランチは独立します。クローンを増やすより軽く、ブランチの切り替え（stash 不要）も要りません。
+
+Claude Code で 2 つのセッションを同じフォルダで動かすと、同じファイルを同時に編集して衝突します。worktree ごとにセッションを分ければ、機能開発と不具合修正を並行できます。
+
+### Claude Code の公式な方法
+
+```bash
+claude --worktree feature-auth
+```
+
+`-w` でも同じです。既定の動作は次のとおりです。
+
+- 作成場所：リポジトリ直下の `.claude/worktrees/<name>/`
+- ブランチ：`worktree-<name>`（新規）
+- 名前を省略すると、`bright-running-fox` のような名前が自動で付く
+- 別のターミナルで違う名前で実行すれば、2 本目の独立セッションになる
+- 公式は、`.claude/worktrees/` を `.gitignore` に追加することを勧めています
+- 新しい worktree は、既定ではリモートの既定ブランチ（通常は `main`）から作られる。現在の作業から分岐したい場合は、設定の `worktree.baseRef` を `"head"` にする
+
+セッション中に「worktree で作業して」と頼むこともできます。サブエージェントを worktree で動かすこともできます（サブエージェントの詳細は別レッスン）。
+
+### 手動で作る方法
+
+特定の既存ブランチを使いたい、リポジトリの外に置きたいときは git を直接使います。
+
+```bash
+git worktree add ../project-feature-a -b feature-a
+cd ../project-feature-a
+claude
+```
+
+このリポジトリには `worktree-flow` スキルがあり、`git worktree add .claude/worktrees/<name> -b feat/<name>` で作成し、worktree 内で担当範囲だけを編集し、マージ後に `git worktree remove` と `git branch -d` で片付ける手順を定めています。
+
+### 環境の用意
+
+worktree は新しいチェックアウトです。依存（例：`pnpm install`）は worktree 内で実行します。`.env` のような gitignore 済みのファイルは、プロジェクト直下の `.worktreeinclude`（`.gitignore` と同じ書式）に書くと、Claude Code が作る worktree にコピーされます。手動の `git worktree add` には効きません。
+
+### 共有されるもの
+
+- 共有：`.git` ディレクトリ、auto memory、project スコープのプラグイン、権限の「今後確認しない」の承認（保存先がメインのチェックアウトの場合）
+- 独立：作業ツリーのファイル、ブランチ、gitignore された `CLAUDE.local.md`
+
+## ハンズオン
+
+練習用の git リポジトリ（コミットあり）で行います。
+
+1. `.gitignore` に追加します。
+
+   ```bash
+   echo ".claude/worktrees/" >> .gitignore
+   ```
+
+   Windows(PowerShell) の場合は次のとおりです。
+
+   ```powershell
+   Add-Content .gitignore ".claude/worktrees/"
+   ```
+
+2. 1 つ目のターミナルで worktree セッションを起動します。
+
+   ```bash
+   claude --worktree practice-a
+   ```
+
+   期待される結果：`.claude/worktrees/practice-a/` ができ、そこが作業ディレクトリのセッションが始まります。
+
+3. 小さな変更を頼みます。
+
+   ```text
+   practice-a.txt というファイルを作り、1行だけ書いて
+   ```
+
+4. 2 つ目のターミナルで、同じリポジトリから別の名前で起動します。
+
+   ```bash
+   claude --worktree practice-b
+   ```
+
+   期待される結果：`practice-a.txt` は、こちらのセッションには存在しません。
+
+5. 3 つ目のターミナルで、worktree の一覧とブランチを確認します。
+
+   ```bash
+   git worktree list
+   git branch --list "worktree-*"
+   ```
+
+   期待される結果：メインと 2 つの worktree、`worktree-practice-a` と `worktree-practice-b` が表示されます。
+
+6. 各セッションを終了します。作業が残っていると、worktree を残すか削除するかを聞かれます。練習なので削除を選びます。手動で片付ける場合は次のとおりです。
+
+   ```bash
+   git worktree remove .claude/worktrees/practice-a
+   ```
+
+## よくある失敗
+
+- **コミットが 1 つもないリポジトリで失敗する**
+  原因：worktree は既存のコミットから作る。対処：先に最初のコミットを作る。公式にも、この場合はエラーになると記載がある。
+- **worktree で `pnpm verify` が通らない（依存がない）**
+  原因：node_modules は worktree に引き継がれない。対処：worktree 内で `pnpm install` を実行する。
+- **`.env` が無くて動かない**
+  原因：gitignore されたファイルはコピーされない。対処：`.worktreeinclude` に書く。秘密のファイルなので、`.gitignore` にも入っていることを確認し、コミットしない。
+- **フォルダだけ削除して、git に登録が残る**
+  原因：`rm -rf` やエクスプローラーで消した。対処：`git worktree remove` を使う。残ってしまったら `git worktree list` で状況を確認する。
+- **未コミットの作業ごと worktree を削除する**
+  原因：終了時の削除プロンプトで、作業が残っているのに削除を選んだ。対処：公式の説明どおり、削除するとディレクトリとブランチが、作業ごと消える。残したい作業は先にコミットする。
+
+## 次へ
+
+次は [ヘッドレス実行](/learn/intermediate/headless) です。対話画面を開かずに `claude -p` を使い、スクリプトや CI から Claude Code を呼び出す方法を学びます。
