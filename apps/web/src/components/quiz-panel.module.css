@@ -1,0 +1,239 @@
+.panel {
+  margin-top: var(--space-8);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+  scroll-margin-top: 5rem;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.head h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.best {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.intro {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.intro p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.error {
+  color: #b91c1c !important;
+  font-weight: 600;
+}
+
+:root[data-theme='dark'] .error {
+  color: #fca5a5 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .error {
+    color: #fca5a5 !important;
+  }
+}
+
+.questions {
+  display: grid;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.question {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.question legend {
+  padding: 0 var(--space-2);
+  font-weight: 700;
+}
+
+.qno {
+  display: inline-block;
+  margin-right: var(--space-2);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 800;
+}
+
+.choices {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.choice:hover {
+  border-color: var(--accent);
+}
+
+.choice:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.choice input {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.3rem;
+  accent-color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.result {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-xl);
+  animation: pop var(--duration-base) var(--ease-spring);
+}
+
+.score:focus-visible {
+  outline-offset: 4px;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+.review {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.review[data-correct='true'] {
+  border-left-color: var(--success);
+}
+
+.review[data-correct='false'] {
+  border-left-color: #dc2626;
+}
+
+.review p {
+  margin: var(--space-1) 0;
+}
+
+.reviewHead {
+  font-weight: 700;
+}
+
+.mark {
+  display: inline-block;
+  width: 1.25rem;
+  margin-right: var(--space-1);
+  font-weight: 800;
+}
+
+.review[data-correct='true'] .mark {
+  color: var(--success);
+}
+
+.review[data-correct='false'] .mark {
+  color: #dc2626;
+}
+
+.yours {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.correct {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.explain {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score {
+    animation: none;
+  }
+}
+
+.party {
+  margin-right: var(--space-2);
+  color: var(--accent);
+  vertical-align: -0.25em;
+}

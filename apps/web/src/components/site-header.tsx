@@ -1,11 +1,9 @@
+import { Terminal } from 'lucide-react';
 import Link from 'next/link';
+import { PaletteTrigger } from './command-palette';
+import { DesktopNav } from './site-nav';
 import { ThemeToggle } from './theme-toggle';
 import styles from './site-header.module.css';
-
-const NAV = [
-  { href: '/roadmap', label: 'ロードマップ' },
-  { href: '/dashboard', label: 'ダッシュボード' },
-] as const;
 
 export function SiteHeader() {
   return (
@@ -13,17 +11,12 @@ export function SiteHeader() {
       <div className={`container ${styles.inner}`}>
         <Link href="/" className={styles.brand} aria-label="Claude Code 学習ロードマップ ホーム">
           <span className={styles.logo} aria-hidden="true">
-            &gt;_
+            <Terminal size={18} strokeWidth={2.5} />
           </span>
           <span className={styles.brandText}>Claude Code 学習</span>
         </Link>
-        <nav aria-label="メイン" className={styles.nav}>
-          {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className={styles.navLink}>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <DesktopNav />
+        <PaletteTrigger />
         <ThemeToggle />
       </div>
     </header>

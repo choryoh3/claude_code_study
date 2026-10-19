@@ -1,0 +1,83 @@
+/* ---- デスクトップ: ヘッダー内のリンク ---- */
+.desktop {
+  display: none;
+  gap: var(--space-1);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.link:hover {
+  background: var(--bg-sunken);
+  color: var(--text);
+}
+
+.link[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+@media (min-width: 52rem) {
+  .desktop {
+    display: flex;
+  }
+}
+
+/* ---- モバイル: 画面下部のタブバー ---- */
+.tabbar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 55;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: var(--tabbar-height);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--glass);
+  backdrop-filter: saturate(1.6) blur(14px);
+  -webkit-backdrop-filter: saturate(1.6) blur(14px);
+  border-top: 1px solid var(--border);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.6875rem; /* 11px: 5つ並べるための最小サイズ */
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.tab span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab[aria-current='page'] {
+  color: var(--accent);
+}
+
+@media (min-width: 52rem) {
+  .tabbar {
+    display: none;
+  }
+}

@@ -1,0 +1,172 @@
+sections:
+  - id: slash-commands
+    title: スラッシュコマンド
+    items:
+      - term: /help
+        description: ヘルプと、利用できるコマンドの一覧を表示する。コマンドは更新で増減するので、迷ったらここで確認する。
+        lesson: slash-commands
+      - term: /clear
+        description: 空のコンテキストで新しい会話を始める。前の会話は /resume で再開できる。
+        lesson: slash-commands
+      - term: /compact
+        description: 会話を要約してコンテキストを空け、同じ会話を続ける。後ろに「残したい内容」を書いて指定できる。
+        lesson: context-management
+      - term: /context
+        description: コンテキストの使用状況を色付きのグリッドで表示する。CLAUDE.md が読み込まれているかの確認にも使う。
+        lesson: context-management
+      - term: /resume
+        description: 過去の会話を再開する。/clear で始めた新しい会話の前の会話にも戻れる。
+        lesson: context-management
+      - term: /rewind
+        description: 会話やコードを以前の時点まで戻す。方向を誤ったときに使う。
+        lesson: context-management
+      - term: /model
+        description: モデルを切り替える。引数なしで選択画面が開き、選んだモデルは新しいセッションの既定値として保存される。
+        lesson: slash-commands
+      - term: /status
+        description: バージョン、モデル、アカウント、接続状態を表示する。有効な設定の出どころの確認にも使う。
+        lesson: slash-commands
+      - term: /init
+        description: プロジェクト用の CLAUDE.md の下書きを作る。すでにある場合は上書きせず改善案を出す。
+        lesson: claude-md
+      - term: /memory
+        description: CLAUDE.md の場所を確認・編集し、auto memory のオン/オフを切り替える。
+        lesson: claude-md
+      - term: /permissions
+        description: 許可・確認・拒否のルールを一覧し、追加・削除する画面を開く。
+        lesson: permission-modes
+      - term: /doctor
+        description: インストール、設定、コンテキスト使用量などをまとめて診断し、修正案を出す。適用前に確認を求められる。
+        lesson: troubleshooting
+  - id: shortcuts
+    title: キー操作
+    items:
+      - term: Shift+Tab
+        description: 権限モードを切り替える。押すたびに循環し、現在のモードはステータスバーに表示される。
+        lesson: permission-modes
+      - term: Esc
+        description: Claude の応答やツール実行を中断する。それまでの作業は残る。
+        lesson: basic-usage
+      - term: Esc Esc
+        description: 入力欄が空のときに2回押すと、巻き戻しメニューが開く。
+        lesson: basic-usage
+      - term: Ctrl+C
+        description: 実行中なら中断する。何も実行していなければ入力を消去し、2回目で終了する。
+        lesson: basic-usage
+      - term: Ctrl+D
+        description: 2回押すと終了する。/exit でも終了できる。
+        lesson: basic-usage
+      - term: "\\ + Enter"
+        description: 送信せずに改行する。すべての端末で使える。Ctrl+J でも改行できる。
+        lesson: basic-usage
+      - term: Ctrl+R
+        description: コマンド履歴を検索する。履歴をたどるだけなら上矢印キーを使う。
+        lesson: basic-usage
+      - term: Ctrl+L
+        description: 画面の乱れを直す。
+        lesson: basic-usage
+      - term: Ctrl+O
+        description: 詳細表示を切り替え、ツールの実行内容を確認する。
+        lesson: basic-usage
+      - term: Ctrl+G
+        description: Plan Mode で提案された計画を、既定のテキストエディタで開いて直接修正する。
+        lesson: plan-mode
+      - term: '@'
+        description: ファイルパスの補完を表示する。Tab で確定でき、指定したファイルを Claude に読ませられる。
+        lesson: basic-usage
+      - term: '!'
+        description: 行頭に付けると、シェルコマンドを直接実行して出力をセッションに追加する。行頭以外では効かない。
+        lesson: basic-usage
+  - id: permission-modes
+    title: 権限モード
+    items:
+      - term: default
+        description: 読み取り以外は確認するモード。画面上の呼び名は Manual で、慎重に進めたい作業に向く。
+        lesson: permission-modes
+      - term: acceptEdits
+        description: 作業ディレクトリ内のファイル編集と、mkdir や mv などの基本的なファイル操作を確認なしで行う。それ以外のコマンドは確認される。
+        lesson: permission-modes
+      - term: plan
+        description: 調査と計画の提案だけを行い、計画を承認するまでソースを編集しないモード。
+        lesson: plan-mode
+      - term: auto
+        description: ほぼ全ての操作を確認なしで行い、裏で別のモデルが安全性をチェックする。利用できるかは環境による。
+        lesson: permission-modes
+      - term: dontAsk
+        description: 事前に許可したものだけを実行し、確認が必要な操作は拒否する。Shift+Tab の循環には出ず、CI など人がいない環境向け。
+        lesson: permission-modes
+      - term: bypassPermissions
+        description: 権限確認も安全チェックも外す危険なモード。隔離されたコンテナや VM でだけ使う。
+        lesson: permission-modes
+      - term: /plan
+        description: プロンプトの先頭に付けると、その依頼だけ Plan Mode で計画させる。例は「/plan 認証のバグを直す」。
+        lesson: plan-mode
+      - term: claude --permission-mode plan
+        description: Plan Mode で起動する。plan の部分を変えると、他のモードを指定して起動できる。
+        lesson: permission-modes
+      - term: permissions.defaultMode
+        description: 起動時の権限モードを決める設定ファイルのキー。
+        lesson: permission-modes
+  - id: cli
+    title: 起動オプションと基本コマンド
+    items:
+      - term: claude
+        description: プロジェクトのフォルダで実行し、対話セッションを始める。初回はブラウザでログインを求められる。
+        lesson: install
+      - term: claude --version
+        description: バージョンを表示する。表示されればインストール成功で、表示されなければ PATH を疑う。
+        lesson: install
+      - term: claude doctor
+        description: シェルから実行する診断コマンド。セッションを始めず、インストールと設定の診断を読み取り専用で表示する。
+        lesson: troubleshooting
+      - term: claude --safe-mode
+        description: CLAUDE.md、スキル、プラグイン、hooks、MCP サーバーなどを無効にして起動する。問題が消えれば原因はカスタマイズにある。
+        lesson: troubleshooting
+      - term: claude --continue
+        description: 会話を再開する。作業の区切りで再起動したあとに使う。
+        lesson: troubleshooting
+      - term: claude --resume
+        description: 端末を閉じたあとなどに、同じディレクトリで実行して会話を戻す。
+        lesson: troubleshooting
+      - term: 'irm https://claude.ai/install.ps1 | iex'
+        description: Windows PowerShell でのネイティブインストール。実行中は進捗が出ないので、終わるまで待つ。
+        lesson: install
+      - term: 'curl -fsSL https://claude.ai/install.sh | bash'
+        description: macOS、Linux、WSL でのネイティブインストール。終わったら新しいターミナルを開いて確認する。
+        lesson: install
+      - term: /login
+        description: セッション内でログインし直す、またはアカウントを切り替える。
+        lesson: install
+      - term: /exit
+        description: セッションを終了する。別名は /quit。
+        lesson: install
+  - id: memory
+    title: CLAUDE.md とメモリ
+    items:
+      - term: '~/.claude/CLAUDE.md'
+        description: 全プロジェクト共通の個人設定。
+        lesson: claude-md
+      - term: ./CLAUDE.md
+        description: プロジェクトの基本方針を書き、チームで共有する（Git 管理）。./.claude/CLAUDE.md に置いてもよい。
+        lesson: claude-md
+      - term: ./CLAUDE.local.md
+        description: 個人かつプロジェクト固有の設定。.gitignore に追加してコミットしない。
+        lesson: claude-md
+      - term: /init
+        description: コードベースを調べて CLAUDE.md の下書きを作る。生成後は不要な行を削って整える。
+        lesson: claude-md
+      - term: /memory
+        description: CLAUDE.md の場所の確認と編集、auto memory のオン/オフの切り替え、auto memory フォルダを開く操作ができる。
+        lesson: claude-md
+      - term: /context
+        description: 一覧の Memory files に CLAUDE.md が出ていれば、読み込まれている。指示が無視されるときは最初にここを見る。
+        lesson: claude-md
+      - term: '@path/to/file'
+        description: CLAUDE.md の中に書くと別ファイルを取り込める。ただし起動時に読み込まれるので、コンテキストの節約にはならない。
+        lesson: claude-md
+      - term: auto memory
+        description: Claude 自身があなたの訂正や好みをメモする仕組み。CLAUDE.md はあなたが書き、auto memory は Claude が書く。
+        lesson: claude-md
+      - term: 200 行未満
+        description: CLAUDE.md の長さの目安。長いと指示が守られにくくなるので、具体的で短い指示だけを書く。
+        lesson: claude-md

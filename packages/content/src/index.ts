@@ -13,3 +13,11 @@ export {
 export type { ParsedLesson } from './parse';
 export { LEVEL_LABELS, PLANNED_TOPICS, findPlannedTopic } from './outline';
 export type { PlannedTopic } from './outline';
+export {
+  ReferenceError,
+  cheatsheetSchema,
+  defaultReferenceDir,
+  glossarySchema,
+  loadReference,
+} from './reference';
+export type { Cheatsheet, CheatsheetItem, Glossary } from './reference';

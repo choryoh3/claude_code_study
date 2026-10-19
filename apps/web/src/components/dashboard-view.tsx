@@ -1,6 +1,7 @@
 'use client';
 
-import { currentStreak } from '@claude-study/schemas';
+import { BADGE_DEFINITIONS, currentStreak } from '@claude-study/schemas';
+import { Award, Flame, PartyPopper } from 'lucide-react';
 import Link from 'next/link';
 import { lessonHref } from '@/lib/lesson-href';
 import type { LevelGroup } from '@/lib/lessons';
@@ -16,6 +17,7 @@ export function DashboardView({ groups }: { groups: LevelGroup[] }) {
   const done = countCompleted(progress, lessons);
   const next = pickNextLesson(progress, lessons);
   const streak = currentStreak(progress.studyDays, toLocalDate(new Date()));
+  const badgeCount = BADGE_DEFINITIONS.filter((b) => progress.badges[b.key]).length;
   const started = lessons.some((l) => statusOf(progress, l.slug) !== 'not_started');
 
   // localStorage を読むまでは骨組みだけ表示し、「0%」が一瞬見えるのを避ける
@@ -42,8 +44,14 @@ export function DashboardView({ groups }: { groups: LevelGroup[] }) {
               <span> / {lessons.length} レッスン完了</span>
             </p>
             <p className={styles.streak}>
-              <span aria-hidden="true">🔥</span>
+              <Flame size={18} aria-hidden="true" className={styles.flame} />
               {streak > 0 ? `${streak}日連続で学習中` : '今日から連続記録をはじめましょう'}
+            </p>
+            <p className={styles.streak}>
+              <Award size={18} aria-hidden="true" className={styles.flame} />
+              <Link href="/badges">
+                獲得バッジ {badgeCount} / {BADGE_DEFINITIONS.length}
+              </Link>
             </p>
           </div>
         </section>
@@ -63,7 +71,10 @@ export function DashboardView({ groups }: { groups: LevelGroup[] }) {
             </>
           ) : (
             <>
-              <p className={styles.nextTitle}>公開中のレッスンをすべて完了しました 🎉</p>
+              <p className={styles.nextTitle}>
+                <PartyPopper size={22} aria-hidden="true" className={styles.flame} />{' '}
+                公開中のレッスンをすべて完了しました
+              </p>
               <p className={styles.nextSummary}>
                 新しいレッスンは順次追加されます。復習にはロードマップをご利用ください。
               </p>

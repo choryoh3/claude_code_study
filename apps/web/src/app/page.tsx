@@ -1,13 +1,14 @@
+import { BookOpen, CircleCheckBig, Terminal, Trophy, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { getLevelGroups, lessonHref } from '@/lib/lessons';
 import styles from './home.module.css';
 
-const STEPS = [
-  { title: '読む', body: '図解と短い解説で、まず全体像をつかむ。' },
-  { title: '試す', body: 'コピーして実行できるハンズオンで、手を動かす。' },
-  { title: '確認する', body: 'クイズで理解を確かめ、つまずきを見つける。' },
-  { title: '定着する', body: '進捗・連続学習・バッジで、続ける力を支える。' },
-] as const;
+const STEPS: ReadonlyArray<{ title: string; body: string; Icon: LucideIcon }> = [
+  { title: '読む', body: '図解と短い解説で、まず全体像をつかむ。', Icon: BookOpen },
+  { title: '試す', body: 'コピーして実行できるハンズオンで、手を動かす。', Icon: Terminal },
+  { title: '確認する', body: 'クイズで理解を確かめ、つまずきを見つける。', Icon: CircleCheckBig },
+  { title: '定着する', body: '進捗・連続学習・バッジで、続ける力を支える。', Icon: Trophy },
+];
 
 export default function HomePage() {
   const groups = getLevelGroups();
@@ -81,8 +82,9 @@ export default function HomePage() {
           {STEPS.map((s, i) => (
             <li key={s.title} className={styles.step}>
               <span className={styles.stepNo} aria-hidden="true">
-                {i + 1}
+                <s.Icon size={18} strokeWidth={2.25} />
               </span>
+              <span className={styles.stepOrder}>STEP {i + 1}</span>
               <h3>{s.title}</h3>
               <p>{s.body}</p>
             </li>

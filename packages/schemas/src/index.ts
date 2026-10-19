@@ -129,3 +129,4 @@ export const apiErrorSchema = z.object({
 export type ApiError = z.infer<typeof apiErrorSchema>;
 
 export { currentStreak } from './streak';
+export { BADGE_DEFINITIONS, computeEarnedBadges } from './badges';

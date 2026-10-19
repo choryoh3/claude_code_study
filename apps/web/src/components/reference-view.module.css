@@ -1,0 +1,217 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+}
+
+@media (min-width: 66rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 14rem;
+    align-items: start;
+  }
+  .toc {
+    position: sticky;
+    top: 5rem;
+    order: 2;
+  }
+}
+
+.searchRow {
+  position: sticky;
+  top: 3.75rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+}
+
+.searchRow:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.searchIcon {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
+  height: 3rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+.search:focus-visible {
+  outline: none; /* 枠全体のフォーカス表示で示す */
+}
+
+.clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.count {
+  margin: var(--space-3) var(--space-2) 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  padding: var(--space-6) 0;
+  color: var(--text-muted);
+}
+
+.section {
+  margin-top: var(--space-6);
+  scroll-margin-top: 8rem;
+}
+
+.section h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-xl);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.item {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+@media (min-width: 40rem) {
+  .item {
+    grid-template-columns: 13rem minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+  }
+}
+
+.term {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+
+.term code {
+  padding: 0.125em 0.5em;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.copy:hover {
+  background: var(--bg-sunken);
+  color: var(--text);
+}
+
+.copy[data-copied] {
+  color: var(--success);
+}
+
+.desc {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.75;
+}
+
+.lesson {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.toc {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+}
+
+.toc h2 {
+  margin: 0 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc a {
+  display: block;
+  padding: var(--space-2) 0;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.toc a:hover {
+  color: var(--accent);
+}
+
+/* 印刷: チートシートとして紙に出せるように、操作部品を隠す */
+@media print {
+  .searchRow,
+  .copy,
+  .toc,
+  .count {
+    display: none;
+  }
+  .item {
+    break-inside: avoid;
+  }
+}

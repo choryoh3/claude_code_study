@@ -1,0 +1,86 @@
+.region {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--space-4) + var(--tabbar-height, 0px));
+  z-index: 60;
+  display: grid;
+  max-width: calc(100vw - 2 * var(--space-4));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  animation: rise var(--duration-slow) var(--ease-spring);
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  font-size: 1.5rem;
+  /* 獲得の瞬間にだけ、ゆっくり広がる光の輪（控えめな演出） */
+  animation: ring 1.4s var(--ease-out) 0.2s 1;
+}
+
+.text {
+  display: grid;
+  gap: 2px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.text span {
+  color: var(--text-muted);
+}
+
+.close {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--bg-sunken);
+  color: var(--text);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+}
+
+@keyframes ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 16px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .icon {
+    animation: none;
+  }
+}
