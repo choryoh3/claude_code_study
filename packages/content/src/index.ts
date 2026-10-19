@@ -1,6 +1,6 @@
 export { createCatalog } from './catalog';
 export type { LessonCatalog } from './catalog';
-export { LESSONS_DIR, loadLessons } from './load';
+export { defaultLessonsDir, loadLessons } from './load';
 export type { Lesson } from './load';
 export {
   LessonParseError,
@@ -11,3 +11,5 @@ export {
   parseLesson,
 } from './parse';
 export type { ParsedLesson } from './parse';
+export { LEVEL_LABELS, PLANNED_TOPICS, findPlannedTopic } from './outline';
+export type { PlannedTopic } from './outline';

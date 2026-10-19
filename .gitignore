@@ -28,3 +28,6 @@ Thumbs.db
 
 # prisma generated client
 packages/db/src/generated/
+
+# next
+next-env.d.ts

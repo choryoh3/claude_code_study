@@ -1,0 +1,237 @@
+.tree {
+  display: grid;
+  gap: var(--space-7);
+  padding-bottom: var(--space-6);
+}
+
+.level {
+  --level-color: var(--level-basic);
+  --level-soft: var(--level-basic-soft);
+}
+.level[data-level='intermediate'] {
+  --level-color: var(--level-intermediate);
+  --level-soft: var(--level-intermediate-soft);
+}
+.level[data-level='advanced'] {
+  --level-color: var(--level-advanced);
+  --level-soft: var(--level-advanced-soft);
+}
+
+.levelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.levelHead h2 {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.count {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 縦に伸びる幹と、そこから枝分かれするノード（スキルツリー風） */
+.nodes {
+  position: relative;
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0 0 0 var(--space-6);
+  list-style: none;
+}
+
+.nodes::before {
+  content: '';
+  position: absolute;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.6875rem;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(var(--level-color), var(--border));
+}
+
+.node {
+  position: relative;
+}
+
+.dot {
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * var(--space-6));
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--bg);
+  font-size: 0.75rem;
+  font-weight: 800;
+  transform: translateY(-50%);
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-spring);
+}
+
+.node[data-status='completed'] .dot {
+  border-color: var(--level-color);
+  background: var(--level-color);
+}
+
+.node[data-status='in_progress'] .dot {
+  border-color: var(--level-color);
+  color: var(--level-color);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.card:hover {
+  transform: translateX(4px);
+  border-color: var(--level-color);
+  box-shadow: var(--shadow-md);
+  color: var(--text);
+}
+
+/* 「次にやること」は常に1つだけ強調する */
+.card[data-next] {
+  border-color: var(--level-color);
+  box-shadow:
+    0 0 0 3px var(--level-soft),
+    var(--shadow-md);
+}
+
+.order {
+  flex: none;
+  color: var(--level-color);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.body {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 700;
+}
+
+.summary {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.tree:not([data-ready]) .state {
+  visibility: hidden;
+}
+
+.state {
+  display: grid;
+  flex: none;
+  gap: var(--space-1);
+  justify-items: end;
+}
+
+.nextTag {
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  line-height: 1.7;
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+.statusText {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.node[data-status='completed'] .statusText {
+  color: var(--success);
+}
+
+.planned {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: var(--text-sm);
+}
+
+.planned:hover {
+  color: var(--text);
+  border-color: var(--level-color);
+}
+
+.soon {
+  flex: none;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+}
+
+@media (max-width: 36rem) {
+  .card {
+    flex-wrap: wrap;
+  }
+  .state {
+    grid-auto-flow: column;
+    align-items: center;
+    margin-left: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nextTag {
+    animation: none;
+  }
+  .card:hover {
+    transform: none;
+  }
+}
