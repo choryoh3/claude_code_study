@@ -14,7 +14,9 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
     "build": "pnpm -r --if-present build",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "e2e": "pnpm --filter @claude-study/e2e run all",
+    "e2e:a11y": "pnpm --filter @claude-study/e2e run a11y"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

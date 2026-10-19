@@ -1,0 +1,19 @@
+{
+  "name": "@claude-study/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本番ビルドを実ブラウザで検査する E2E とアクセシビリティ検査（CIでは実行しない。README参照）",
+  "scripts": {
+    "learning": "node learning.mjs",
+    "content": "node content.mjs",
+    "site": "node site.mjs",
+    "a11y": "node a11y.mjs",
+    "all": "node site.mjs && node learning.mjs && node content.mjs && node a11y.mjs"
+  },
+  "dependencies": {
+    "axe-core": "4.14.0",
+    "playwright-core": "1.64.1",
+    "yaml": "^2.9.1"
+  }
+}

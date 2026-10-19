@@ -100,6 +100,18 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(@types/react@19.3.0)
 
+  e2e:
+    dependencies:
+      axe-core:
+        specifier: 4.14.0
+        version: 4.14.0
+      playwright-core:
+        specifier: 1.64.1
+        version: 1.64.1
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
+
   packages/content:
     dependencies:
       '@claude-study/schemas':
@@ -1332,6 +1344,10 @@ packages:
     resolution: {integrity: sha512-NZKeq9AfyQvEeNlN0zSYAaWrmBffJh3IELMZfRpJVWgrpEbtEpnjvzqBPf+mxoI287JohRDoa+/nsfqqiZmF6g==}
     engines: {node: '>= 6.0.0'}
 
+  axe-core@4.14.0:
+    resolution: {integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==}
+    engines: {node: '>=4'}
+
   bail@2.0.2:
     resolution: {integrity: sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw==}
 
@@ -2273,6 +2289,11 @@ packages:
 
   playwright-core@1.64.0-alpha-1790635538000:
     resolution: {integrity: sha512-pNwaXirhXMRLaRQs4NQ18EpTdtDoFwyPH9FOaaDC7YXG4hpwE2xmwCic/1srbuExVQC7zT9LJSJpDBAru+Vo9A==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright-core@1.64.1:
+    resolution: {integrity: sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -3783,6 +3804,8 @@ snapshots:
 
   aws-ssl-profiles@1.1.2: {}
 
+  axe-core@4.14.0: {}
+
   bail@2.0.2: {}
 
   balanced-match@4.0.4: {}
@@ -5020,6 +5043,8 @@ snapshots:
       pathe: 2.0.3
 
   playwright-core@1.64.0-alpha-1790635538000: {}
+
+  playwright-core@1.64.1: {}
 
   playwright@1.64.0-alpha-1790635538000:
     dependencies:
