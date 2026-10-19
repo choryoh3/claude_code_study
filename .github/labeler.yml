@@ -1,0 +1,82 @@
+# =============================================================================
+# PR 自動ラベルのルール（.github/workflows/labeler.yml から使われる）
+# -----------------------------------------------------------------------------
+# 書式（actions/labeler v5 以降）:
+#   <ラベル名>:
+#     - changed-files:
+#         - any-glob-to-any-file: [glob, ...]   # いずれかの変更ファイルが、いずれかの glob に一致
+#     - head-branch: [正規表現, ...]             # PR のブランチ名に一致
+#   トップレベルの複数条件は AND、any: で囲むと OR になる。
+# 方針:
+#   - 「領域（area/*）」はディレクトリ構成から機械的に決まるので自動化する
+#   - 「種別」はブランチ名の接頭辞（feat/ fix/）から付ける。
+#     ラベル名を GitHub 既定の bug / enhancement / documentation に合わせ、
+#     Issue テンプレート・リリースノートの分類と共通化する
+# 他プロジェクトへの応用: area/* をそのプロジェクトのディレクトリ構成に書き換える。
+# 存在しないラベルは付与時に自動作成される（色は後から Settings > Labels で調整可能）。
+# 読む主体: workflows/labeler.yml が呼ぶ actions/labeler（GitHub Actions）。それ自体は実行されない設定データ。
+# =============================================================================
+
+# --- 領域（プロジェクト固有） -------------------------------------------------
+area/web:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/web/**'
+
+area/api:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/api/**'
+
+area/db:
+  - changed-files:
+      - any-glob-to-any-file: 'packages/db/**'
+
+area/content:
+  - changed-files:
+      - any-glob-to-any-file: 'packages/content/**'
+
+area/schemas:
+  - changed-files:
+      - any-glob-to-any-file: 'packages/schemas/**'
+
+# --- 横断的な関心事（汎用） ---------------------------------------------------
+# 依存関係の変更はレビュー観点が特殊（ライセンス・脆弱性・lockfile の妥当性）なので区別する。
+# Dependabot の PR（ブランチ名が dependabot/ で始まる）も対象にする。
+# なぜ: GitHub Actions の更新 PR は package.json を変更しないため、ファイル条件だけだと
+#       Dependabot が付けた dependencies ラベルを sync-labels が外してしまい、リリースノートの分類が崩れる。
+# any: で囲むと「ファイル条件 または ブランチ条件」の OR になる（囲まないと AND）。
+dependencies:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file: ['**/package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']
+      - head-branch: ['^dependabot/']
+
+# CI/CD の変更は権限やシークレットに影響し得るため、目立たせて慎重にレビューする。
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/workflows/**', '.github/actions/**']
+
+# AI エージェント（Claude Code / Copilot）の挙動を変える設定。
+# 人間のコードと同じく、エージェントへの指示もレビュー対象にする。
+ai-config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'CLAUDE.md'
+          - 'AGENTS.md'
+          - '.claude/**'
+          - '.mcp.json'
+          - '.github/copilot-instructions.md'
+          - '.github/instructions/**'
+          - '.github/workflows/copilot-setup-steps.yml'
+
+# 変更ファイルが「すべて」ドキュメントのときだけ付ける（コード変更を含む PR には付けない）。
+documentation:
+  - changed-files:
+      - all-globs-to-all-files: ['{docs/**,**/*.md}']
+
+# --- 種別（ブランチ名から） ---------------------------------------------------
+# .claude/skills/worktree-flow の命名規則（feat/<name>）と一致させている。
+enhancement:
+  - head-branch: ['^feat/', '^feature/']
+
+bug:
+  - head-branch: ['^fix/', '^bugfix/', '^hotfix/']

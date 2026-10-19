@@ -1,0 +1,76 @@
+# =============================================================================
+# バグ報告テンプレート（Issue Forms）
+# -----------------------------------------------------------------------------
+# なぜ Markdown テンプレートではなく YAML（Issue Forms）なのか:
+#   - 必須項目（validations.required）を強制でき、再現手順の書き漏れを防げる
+#   - 入力欄が分かれているので、報告者が「何を書けばよいか」で迷わない
+#   - Copilot cloud agent に Issue を割り当てたとき、構造化された情報がそのまま作業指示になる
+# labels: 作成時に自動付与。リリースノートの分類（.github/release.yml）にも使う。
+# 読む主体: GitHub 本体（Issue 作成画面のフォームを描画する）。Actions は動かない。Copilot cloud agent に Issue を割り当てると、入力内容が作業指示として読まれる。
+# =============================================================================
+name: 🐛 バグ報告
+description: 期待どおりに動かない箇所を報告する
+title: 'bug: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        報告ありがとうございます。再現できる情報があるほど早く修正できます。
+        **パスワード・トークン・個人情報は書かないでください。**
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 何が起きたか
+      description: 実際に起きたことを簡潔に書いてください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: 誰が実行しても同じ結果になるように、番号付きで書いてください。
+      placeholder: |
+        1. ○○のページを開く
+        2. ○○をクリックする
+        3. エラーが表示される
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待した動作
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 環境
+      description: OS・ブラウザ・バージョンなど、関係しそうなもの。
+      placeholder: '例: macOS 15 / Chrome 140'
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: ログ・スクリーンショット
+      description: エラーメッセージやコンソール出力。シークレットが含まれていないか確認してください。
+      # render: shell を指定すると、貼り付けた内容が自動でコードブロックになる。
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 確認事項
+      options:
+        - label: 既存の Issue に同じ報告がないことを確認した
+          required: true
+        - label: 報告内容にシークレットや個人情報が含まれていない
+          required: true

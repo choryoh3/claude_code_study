@@ -1,0 +1,72 @@
+# =============================================================================
+# Workflow Lint: GitHub Actions のワークフロー自体を検査する
+# -----------------------------------------------------------------------------
+# 目的:
+#   CI の設定ミスやセキュリティホールを、マージ前に機械的に検出する。
+#   ワークフローは「本番環境へのアクセス権を持つコード」なので、アプリのコードと同等以上に検査する。
+# 2 つのツールの役割分担:
+#   - actionlint : 構文・型・式の誤り、存在しない入力名、shellcheck による run スクリプトの検査
+#                  （「動かない」を検出する）
+#   - zizmor     : 過剰な権限、SHA 未固定、テンプレートインジェクション、危険なトリガー、
+#                  資格情報の残留など（「危ない」を検出する）
+# なぜパス条件（paths: .github/**）を付けないのか:
+#   必須チェックにするため。パス条件でスキップされると必須チェックが Pending のまま残る。
+#   どちらも数十秒で終わるので、毎回実行してもコストは小さい。
+# 実行主体: GitHub Actions（ランナー上で actionlint と zizmor を実行）。Copilot は関与しない。
+# =============================================================================
+name: Workflow Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # 公式 Docker イメージを「バージョン指定」で使う。shellcheck が同梱されており、
+      # run: に書いたシェルスクリプトのバグ（未クォート変数など）も同時に検出できる。
+      # curl | bash でスクリプトを取ってくる方式は、取得元が改ざんされると任意コード実行になるため避ける。
+      - name: Run actionlint
+        run: docker run --rm -v "${GITHUB_WORKSPACE}:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # 例外（意図的に許容する指摘）は .github/zizmor.yml に理由付きで記録する。
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+        with:
+          # advanced-security: false + annotations: true
+          #   指摘を PR の該当行に注釈として表示し、指摘があればジョブを失敗させる。
+          #   true（SARIF を Code scanning に送る方式）だとジョブ自体は成功してしまい、
+          #   GHAS の無い private リポジトリでは使えないため、どこでも動くこちらを既定にする。
+          advanced-security: false
+          annotations: true

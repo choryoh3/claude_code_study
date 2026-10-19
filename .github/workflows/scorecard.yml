@@ -1,0 +1,74 @@
+# =============================================================================
+# OpenSSF Scorecard: リポジトリのセキュリティ慣行を採点する
+# -----------------------------------------------------------------------------
+# 目的:
+#   「ブランチ保護」「action の SHA 固定」「ワークフローの最小権限」「依存の自動更新」
+#   「危険なワークフロー」などを外部の基準（OpenSSF）で定期的に自己診断する。
+#   設定が知らないうちに緩んだ（誰かが保護を外した等）ことにも気付ける。
+#   結果は Security タブ > Code scanning に表示される。
+# なぜ入れるか:
+#   このディレクトリの各設定は「入れた時点」では正しくても、運用中に劣化しやすい。
+#   第三者基準での継続的な点検があると、劣化を検出できる。
+# 注意:
+#   scorecard-action は結果を公開（publish_results）する場合、ワークフローの書き方に制約がある
+#   （トップレベルの env / defaults 禁止、使える action の制限など）。
+#   このファイルに他のステップを足すと公開が失敗することがあるため、変更は最小限にする。
+#   private リポジトリでは publish_results を false にする。
+# 実行主体: GitHub Actions（ランナー上で実行）。結果は OpenSSF の API と GitHub の Code scanning に送られる。Copilot は関与しない。
+# =============================================================================
+name: Scorecard
+
+on:
+  # ブランチ保護ルールが変更されたら即座に再評価する（保護の解除を検知するため）。
+  branch_protection_rule:
+  # 週 1 回の定期評価（UTC。月曜 10:41 JST）。
+  schedule:
+    - cron: '41 1 * * 1'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# トップレベルでは何も許可せず、必要な権限はジョブ単位で付与する。
+permissions: {}
+
+jobs:
+  analysis:
+    name: scorecard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # 結果（SARIF）を Code scanning にアップロードする。
+      security-events: write
+      # publish_results: true のとき、OIDC トークンで「このリポジトリのこのワークフローが出した結果」
+      # であることを OpenSSF の API に証明する（なりすまし防止）。
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # 結果を OpenSSF の公開 API に送り、README にバッジを表示できるようにする。
+          # public リポジトリ向け。private では false にすること。
+          publish_results: true
+
+      # 結果ファイルを Artifact として保存（Code scanning にアップロードできなかった時の調査用）。
+      # retention-days を短くするのは、不要なストレージ消費を避けるため。
+      - name: Upload artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          sarif_file: results.sarif
