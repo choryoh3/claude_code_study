@@ -1,10 +1,12 @@
 'use client';
 
-import type { ProgressStatus } from '@claude-study/schemas';
+import type { BadgeKey, ProgressStatus } from '@claude-study/schemas';
 import { useSyncExternalStore } from 'react';
 import {
   EMPTY_PROGRESS,
   parseStoredProgress,
+  withBadges,
+  withQuizResult,
   withStatus,
   type GuestProgress,
 } from './progress-logic';
@@ -45,14 +47,29 @@ function subscribe(listener: () => void) {
   };
 }
 
-export function setLessonStatus(slug: string, status: ProgressStatus) {
-  const next = withStatus(getSnapshot(), slug, status, new Date());
+/** 現在の状態から次の状態を作って保存し、購読者に知らせる。内容が変わらなければ何もしない。 */
+function update(next: (current: GuestProgress) => GuestProgress) {
+  const current = getSnapshot();
+  const updated = next(current);
+  if (updated === current) return;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
+    window.localStorage.setItem(KEY, JSON.stringify(updated));
   } catch {
     return; // 保存できない環境では何もしない（学習自体は続けられる）
   }
   for (const l of listeners) l();
+}
+
+export function setLessonStatus(slug: string, status: ProgressStatus) {
+  update((p) => withStatus(p, slug, status, new Date()));
+}
+
+export function recordQuizResult(slug: string, score: number, total: number) {
+  update((p) => withQuizResult(p, slug, score, total, new Date()));
+}
+
+export function awardBadges(keys: readonly BadgeKey[]) {
+  update((p) => withBadges(p, keys, new Date()));
 }
 
 /** ゲストの学習状態。サーバー描画時は空の状態を返し、クライアントで実際の値に切り替わる。 */

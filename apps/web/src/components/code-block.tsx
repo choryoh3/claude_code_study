@@ -1,5 +1,6 @@
 'use client';
 
+import { Check, Copy } from 'lucide-react';
 import { isValidElement, useRef, useState, type ReactNode } from 'react';
 import styles from './code-block.module.css';
 
@@ -65,6 +66,7 @@ export function CodeBlock({ children }: { children?: ReactNode }) {
           onClick={copy}
           data-copied={copied || undefined}
         >
+          {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
           {copied ? 'コピーしました' : 'コピー'}
         </button>
       </figcaption>

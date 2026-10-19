@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { statusOf } from '@/lib/progress-logic';
 import { setLessonStatus, useIsClient, useProgress } from '@/lib/progress-store';
@@ -30,7 +31,14 @@ export function LessonActions({ slug }: { slug: string }) {
         aria-pressed={done}
         onClick={() => setLessonStatus(slug, done ? 'in_progress' : 'completed')}
       >
-        {done ? '✓ 完了済み（クリックで戻す）' : 'このレッスンを完了にする'}
+        {done ? (
+          <>
+            <Check size={18} aria-hidden="true" />
+            完了済み（クリックで戻す）
+          </>
+        ) : (
+          'このレッスンを完了にする'
+        )}
       </button>
       <p className={styles.note} role="status" aria-live="polite">
         {done

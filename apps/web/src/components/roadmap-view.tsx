@@ -1,6 +1,7 @@
 'use client';
 
 import type { LessonSummary } from '@claude-study/schemas';
+import { Check, Circle } from 'lucide-react';
 import Link from 'next/link';
 import { lessonHref } from '@/lib/lesson-href';
 import type { LevelGroup } from '@/lib/lessons';
@@ -13,8 +14,6 @@ const STATUS_LABEL = {
   in_progress: '学習中',
   not_started: '未着手',
 } as const;
-
-const STATUS_MARK = { completed: '✓', in_progress: '●', not_started: '' } as const;
 
 export function RoadmapView({ groups }: { groups: LevelGroup[] }) {
   const progress = useProgress();
@@ -51,7 +50,10 @@ export function RoadmapView({ groups }: { groups: LevelGroup[] }) {
                 return (
                   <li key={lesson.slug} className={styles.node} data-status={status}>
                     <span className={styles.dot} aria-hidden="true">
-                      {STATUS_MARK[status]}
+                      {status === 'completed' && <Check size={14} strokeWidth={3} />}
+                      {status === 'in_progress' && (
+                        <Circle size={8} fill="currentColor" strokeWidth={0} />
+                      )}
                     </span>
                     <Link
                       href={lessonHref(lesson.level, lesson.slug)}

@@ -1,13 +1,18 @@
 import {
   LEVEL_LABELS,
   PLANNED_TOPICS,
+  loadReference,
   loadLessons,
+  type Cheatsheet,
+  type Glossary,
   type Lesson,
   type PlannedTopic,
 } from '@claude-study/content';
 import type { Level, LessonSummary } from '@claude-study/schemas';
 import { existsSync } from 'node:fs';
-export { lessonHref } from './lesson-href';
+import { lessonHref } from './lesson-href';
+
+export { lessonHref };
 import path from 'node:path';
 
 let cache: Lesson[] | undefined;
@@ -61,4 +66,27 @@ export function getLevelGroups(): LevelGroup[] {
       planned,
     };
   });
+}
+
+let referenceCache: { cheatsheet: Cheatsheet; glossary: Glossary } | undefined;
+
+/** チートシートと用語集。解説先レッスンが実在することも、ここで検証される。 */
+export function getReference() {
+  const dir = [
+    path.resolve(process.cwd(), '../../packages/content/reference'),
+    path.resolve(process.cwd(), 'packages/content/reference'),
+  ].find((p) => existsSync(p));
+  if (!dir) throw new Error('チートシート・用語集のディレクトリが見つかりません');
+  referenceCache ??= loadReference(new Set(getLessons().map((l) => l.slug)), dir);
+  return referenceCache;
+}
+
+/** 解説先レッスンの表示用情報（タイトルとURL）を slug から引く */
+export function getLessonLinks(): Record<string, { title: string; href: string }> {
+  return Object.fromEntries(
+    getLessons().map((l) => [
+      l.slug,
+      { title: l.frontmatter.title, href: lessonHref(l.level, l.slug) },
+    ]),
+  );
 }

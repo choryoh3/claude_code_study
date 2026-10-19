@@ -11,7 +11,7 @@
 .inner {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-height: 3.75rem;
 }
 
@@ -37,9 +37,6 @@
   border-radius: var(--radius-sm);
   background: var(--terminal-bg);
   color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: 700;
   transition: transform var(--duration-base) var(--ease-spring);
 }
 
@@ -47,38 +44,9 @@
   transform: rotate(-6deg) scale(1.06);
 }
 
-.nav {
-  display: flex;
-  gap: var(--space-1);
-}
-
-.navLink {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-full);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  text-decoration: none;
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
-}
-
-.navLink:hover {
-  background: var(--bg-sunken);
-  color: var(--text);
-}
-
-/* 狭い画面ではロゴの文字を隠してナビを優先する */
+/* 狭い画面ではロゴの文字を隠す（ナビは画面下部のタブバーに移る） */
 @media (max-width: 30rem) {
   .brandText {
     display: none;
-  }
-  .navLink {
-    padding: 0 var(--space-2);
-    font-size: var(--text-xs);
   }
 }

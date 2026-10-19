@@ -1,0 +1,64 @@
+terms:
+  - term: ターミナル
+    description: コマンドを文字で入力して実行する画面。Claude Code はここで起動して使う。
+    lesson: install
+  - term: PATH
+    description: コマンドを探すフォルダの一覧。claude が見つからないときは、ここにインストール先が入っていないことが多い。
+    lesson: install
+  - term: WSL
+    description: Windows 上で Linux を動かす仕組み。使う場合は WSL のターミナルの中で Linux 用のコマンドを実行する。
+    lesson: install
+  - term: ネイティブインストール
+    description: 公式が推奨するインストール方法。OS ごとのコマンドで行い、バックグラウンドで自動更新される。
+    lesson: install
+  - term: シェルモード
+    description: 行頭に ! を付けて入力するとなるモード。コマンドを直接実行し、出力をセッションに追加する。
+    lesson: basic-usage
+  - term: スラッシュコマンド
+    description: セッション内で / から始めて入力する、Claude Code 自体を操作する命令。メッセージの先頭でだけ認識される。
+    lesson: slash-commands
+  - term: スキル
+    description: 手順化された作業。スラッシュコマンドの候補に、組み込みコマンドと一緒に表示される。
+    lesson: slash-commands
+  - term: 権限（パーミッション）
+    description: ファイル編集やコマンド実行などの操作を、確認なしで実行してよいかの取り決め。
+    lesson: permission-modes
+  - term: 権限モード
+    description: 権限の基本方針をまとめて切り替えるスイッチ。Shift+Tab で切り替え、現在のモードはステータスバーに表示される。
+    lesson: permission-modes
+  - term: acceptEdits
+    description: 作業ディレクトリ内の編集と基本的なファイル操作を、確認なしで許可する権限モード。
+    lesson: permission-modes
+  - term: bypassPermissions
+    description: 権限確認も安全チェックも外す危険な権限モード。隔離されたコンテナや VM でだけ使う。
+    lesson: permission-modes
+  - term: Plan Mode
+    description: 編集をせず、調査と計画の提案だけを行う権限モード。設定値は plan。
+    lesson: plan-mode
+  - term: コンテキストウィンドウ
+    description: Claude が一度に覚えておける情報の容量。指示、読んだファイル、返答などがすべて入る。
+    lesson: context-management
+  - term: トークン
+    description: コンテキストの量を数える単位。会話が長いほど、1回ごとの消費が増える。
+    lesson: context-management
+  - term: コンパクト
+    description: 会話を要約してコンテキストを空け、同じ会話を続けること。/compact で実行する。
+    lesson: context-management
+  - term: 自動コンパクト
+    description: コンテキストの上限に近づくと、Claude Code が自動で会話を要約すること。会話中だけで伝えた細かい指示は落ちることがある。
+    lesson: context-management
+  - term: CLAUDE.md
+    description: プロジェクトの方針やコマンドを書いておくファイル。セッション開始時に読み込まれるが、強制ではなく参考情報として扱われる。
+    lesson: claude-md
+  - term: auto memory
+    description: Claude 自身があなたの訂正や好みをメモする仕組み。CLAUDE.md とは別に保存され、/memory から確認できる。
+    lesson: claude-md
+  - term: hooks
+    description: 必ず毎回実行したい処理を任せる仕組み。CLAUDE.md は強制ではないため、確実に守らせたいことに使う。中級で扱う。
+    lesson: claude-md
+  - term: 確認手段
+    description: テスト、ビルド、スクリーンショットなど、Claude が自分で実行して合否を読める確認方法。指示に含めると結果が安定する。
+    lesson: effective-prompts
+  - term: セーフモード
+    description: claude --safe-mode で起動する状態。CLAUDE.md、スキル、プラグイン、hooks、MCP サーバーなどが無効になり、原因の切り分けに使う。
+    lesson: troubleshooting

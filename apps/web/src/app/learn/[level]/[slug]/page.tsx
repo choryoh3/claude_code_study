@@ -1,12 +1,14 @@
 import { findPlannedTopic, PLANNED_TOPICS } from '@claude-study/content';
 import { levelSchema } from '@claude-study/schemas';
 import type { Metadata } from 'next';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
 import { LessonActions } from '@/components/lesson-actions';
 import { mdxComponents, SECTION_IDS } from '@/components/mdx-components';
+import { QuizPanel } from '@/components/quiz-panel';
 import { getLesson, getLessons, lessonHref, toSummary } from '@/lib/lessons';
 import styles from './lesson.module.css';
 
@@ -66,6 +68,20 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
   const next = all[index + 1];
   const { title, summary, verifiedAt } = lesson.frontmatter;
 
+  // 本文を「次へ」の見出しの直前で分け、そのあいだにクイズを挟む
+  const splitAt = lesson.body.indexOf('\n## 次へ');
+  const beforeNext = splitAt >= 0 ? lesson.body.slice(0, splitAt) : lesson.body;
+  const afterNext = splitAt >= 0 ? lesson.body.slice(splitAt + 1) : '';
+  // 目次: クイズは「次へ」の直前に入れる
+  const tocItems = lesson.headings.flatMap((h) =>
+    h === '次へ'
+      ? [
+          { label: 'クイズ', id: 'quiz-section' },
+          { label: h, id: SECTION_IDS[h] },
+        ]
+      : [{ label: h, id: SECTION_IDS[h] }],
+  );
+
   return (
     <div className={`container ${styles.layout}`}>
       <article className={styles.article}>
@@ -83,16 +99,31 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
 
         <div className={styles.prose}>
           <MDXRemote
-            source={lesson.body}
+            source={beforeNext}
             components={mdxComponents}
             options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
           />
         </div>
 
+        {/* クイズは「よくある失敗」と「次へ」のあいだに置く（固定フォーマットの順序どおり） */}
+        <QuizPanel slug={lesson.slug} />
+
+        {afterNext && (
+          <div className={styles.prose}>
+            <MDXRemote
+              source={afterNext}
+              components={mdxComponents}
+              options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+            />
+          </div>
+        )}
+
         <nav className={styles.pager} aria-label="前後のレッスン">
           {prev ? (
             <Link href={lessonHref(prev.level, prev.slug)} rel="prev">
-              <span>← 前のレッスン</span>
+              <span>
+                <ArrowLeft size={14} aria-hidden="true" /> 前のレッスン
+              </span>
               {prev.title}
             </Link>
           ) : (
@@ -100,7 +131,9 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
           )}
           {next && (
             <Link href={lessonHref(next.level, next.slug)} rel="next" data-align="end">
-              <span>次のレッスン →</span>
+              <span>
+                次のレッスン <ArrowRight size={14} aria-hidden="true" />
+              </span>
               {next.title}
             </Link>
           )}
@@ -111,9 +144,9 @@ export default async function LessonPage({ params }: { params: Promise<Params> }
         <nav aria-label="目次" className={styles.toc}>
           <h2>目次</h2>
           <ol>
-            {lesson.headings.map((h) => (
-              <li key={h}>
-                <a href={`#${SECTION_IDS[h]}`}>{h}</a>
+            {tocItems.map((item) => (
+              <li key={item.id}>
+                <a href={`#${item.id}`}>{item.label}</a>
               </li>
             ))}
           </ol>

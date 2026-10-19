@@ -158,3 +158,9 @@
     animation: none;
   }
 }
+
+.flame {
+  flex: none;
+  color: var(--accent);
+  vertical-align: -0.2em;
+}

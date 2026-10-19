@@ -91,3 +91,10 @@
   font-family: inherit;
   white-space: pre;
 }
+
+.copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+}
