@@ -1,0 +1,249 @@
+.layout {
+  display: grid;
+  /* 1列でも、コードブロックや表の幅に引っ張られて列が広がらないようにする */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  padding-block: var(--space-6);
+}
+
+/* 本文の横に、目次と完了ボタンを固定で置く（広い画面のみ） */
+@media (min-width: 66rem) {
+  .layout {
+    grid-template-columns: minmax(0, var(--reading-width)) 18rem;
+    justify-content: space-between;
+    align-items: start;
+  }
+  .aside {
+    position: sticky;
+    top: 5rem;
+  }
+}
+
+/* 狭い画面では、完了ボタンを本文の後ろ、目次は本文の前に置く */
+.aside {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.header h1 {
+  margin: var(--space-3) 0 var(--space-3);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.summary {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+}
+
+.verified {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+/* ---- 本文のタイポグラフィ ---- */
+.article {
+  min-width: 0;
+}
+
+.prose {
+  margin-top: var(--space-6);
+  font-size: var(--text-base);
+}
+
+.prose h2 {
+  margin: var(--space-7) 0 var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--border);
+  font-size: var(--text-2xl);
+}
+
+.prose h2:first-child {
+  margin-top: 0;
+}
+
+.prose h3 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: var(--text-xl);
+}
+
+.prose p {
+  margin: var(--space-4) 0;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.5em;
+}
+
+.prose li {
+  margin: var(--space-2) 0;
+}
+
+.prose li > ul,
+.prose li > ol {
+  margin: var(--space-1) 0;
+}
+
+.prose strong {
+  font-weight: 800;
+}
+
+.prose :not(pre) > code {
+  padding: 0.125em 0.4em;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  overflow-wrap: anywhere;
+}
+
+.prose blockquote {
+  margin: var(--space-5) 0;
+  padding: var(--space-2) var(--space-5);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--accent-soft);
+}
+
+.prose :global(.table-scroll) {
+  margin: var(--space-5) 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.prose table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.prose th,
+.prose td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.7;
+}
+
+.prose th {
+  background: var(--bg-sunken);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.prose tr:last-child td {
+  border-bottom: 0;
+}
+
+.prose hr {
+  margin: var(--space-6) 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* ---- 前後のレッスン ---- */
+.pager {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
+@media (min-width: 40rem) {
+  .pager {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pager a {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.pager a:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.pager a[data-align='end'] {
+  text-align: right;
+}
+
+.pager span {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+/* ---- 目次 ---- */
+.toc {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+}
+
+.toc h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.toc ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc a {
+  display: block;
+  padding: var(--space-2) 0;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.toc a:hover {
+  color: var(--accent);
+}
+
+/* ---- 準備中ページ ---- */
+.soon {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+  max-width: 40rem;
+  margin-inline: 0;
+  padding-block: var(--space-8);
+}
+
+.soon h1 {
+  margin: 0;
+  font-size: var(--text-3xl);
+}
+
+.soon p {
+  margin: 0;
+  color: var(--text-muted);
+}

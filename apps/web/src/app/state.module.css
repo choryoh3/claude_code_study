@@ -1,0 +1,66 @@
+.state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+  max-width: 40rem;
+  margin-inline: 0;
+  padding-block: var(--space-8);
+}
+
+.state h1 {
+  margin: 0;
+  font-size: var(--text-3xl);
+}
+
+.state p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-hero);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent) !important;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-7);
+}
+
+.loading span {
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--bg-sunken), var(--bg-elevated), var(--bg-sunken));
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.loading span:nth-child(1) {
+  width: 55%;
+  height: 3.5rem;
+}
+.loading span:nth-child(3) {
+  width: 80%;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading span {
+    animation: none;
+  }
+}
