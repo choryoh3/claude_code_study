@@ -54,6 +54,18 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  packages/content:
+    dependencies:
+      '@claude-study/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
   packages/db:
     dependencies:
       '@claude-study/schemas':
@@ -3228,8 +3240,7 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  yaml@2.9.1:
-    optional: true
+  yaml@2.9.1: {}
 
   yocto-queue@0.1.0: {}
 

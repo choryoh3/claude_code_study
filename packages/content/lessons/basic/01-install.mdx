@@ -1,0 +1,150 @@
+---
+title: インストールと初回起動
+level: basic
+order: 1
+summary: Claude Code をインストールし、ログインして最初の質問を投げるまでの手順を、Windows と macOS/Linux の両方で確認します。
+verifiedAt: '2026-10-19'
+quiz:
+  - id: q1
+    prompt: Windows の PowerShell で公式のネイティブインストールを行うコマンドはどれですか。
+    choices:
+      - curl -fsSL https://claude.ai/install.sh | bash
+      - irm https://claude.ai/install.ps1 | iex
+      - brew install --cask claude-code
+    answerIndex: 1
+    explanation: PowerShell 用は `irm https://claude.ai/install.ps1 | iex` です。1つ目は macOS / Linux / WSL 用、3つ目は Homebrew（macOS 向け）の方法です。
+  - id: q2
+    prompt: インストール直後に `claude` が「見つからない」と言われました。まず疑うべき原因はどれですか。
+    choices:
+      - Claude のサブスクリプションが切れている
+      - インストール先のディレクトリが PATH に入っていない（または新しいターミナルを開いていない）
+      - Node.js のバージョンが古い
+    answerIndex: 1
+    explanation: ネイティブインストールは Node.js を必要としません。多くは PATH 未反映が原因で、新しいターミナルを開き直すか PATH を追加します。契約状況はログイン時の問題であり、コマンドが見つからない原因ではありません。
+  - id: q3
+    prompt: 初回起動でログインするとき、利用できるアカウントとして正しいものはどれですか。
+    choices:
+      - 無料の claude.ai プランだけで利用できる
+      - Claude の有料プラン（Pro/Max/Team/Enterprise）、Console アカウント、対応クラウド経由のいずれか
+      - GitHub アカウントだけで利用できる
+    answerIndex: 1
+    explanation: 公式ドキュメントでは、無料の claude.ai プランには Claude Code が含まれないと説明されています。GitHub アカウントでのログインも記載されていません。
+  - id: q4
+    prompt: インストールが成功したか確認するコマンドはどれですか。
+    choices:
+      - claude --version
+      - claude install --check
+      - claude verify
+    answerIndex: 0
+    explanation: '`claude --version` でバージョン番号が表示されれば成功です。より詳しい診断には `claude doctor` を使います。他の2つは公式ドキュメントに載っていません。'
+---
+
+## ゴール
+
+- Claude Code をインストールし、`claude --version` で動作確認できる
+- プロジェクトのフォルダで `claude` を起動し、ログインを完了できる
+- 最初の質問を投げて、返答を受け取れる
+
+## 前提
+
+- ターミナル（コマンドを文字で入力して実行する画面）を開ける
+- 作業用のプロジェクトフォルダが1つある（空でも可。コードがあるほうが体験しやすい）
+- 次のいずれかのアカウントがある: Claude の有料プラン（Pro / Max / Team / Enterprise）、Claude Console、または対応クラウド経由の利用権。**無料の claude.ai プランでは Claude Code は使えません**
+- 動作環境: macOS 13.0 以上、Windows 10 1809 以上、Ubuntu 20.04 以上、Debian 10 以上など。4GB 以上の RAM とインターネット接続が必要
+
+## 解説
+
+### インストール方法
+
+公式推奨は「ネイティブインストール」です。OS ごとにコマンドが違います。
+
+| 環境                | コマンド                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| macOS / Linux / WSL | `curl -fsSL https://claude.ai/install.sh \| bash`                                           |
+| Windows PowerShell  | `irm https://claude.ai/install.ps1 \| iex`                                                  |
+| Windows CMD         | `curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd` |
+| Homebrew            | `brew install --cask claude-code`                                                           |
+| WinGet              | `winget install Anthropic.ClaudeCode`                                                       |
+
+WSL は Windows 上で Linux を動かす仕組みです。WSL を使う場合は、WSL のターミナルの中で Linux 用のコマンドを実行します。ネイティブインストールはバックグラウンドで自動更新されますが、Homebrew と WinGet は自動更新されないため、手動でアップグレードします。
+
+Windows では Git for Windows の導入が推奨されています。未導入の場合は PowerShell がシェルツールとして使われます。
+
+### 実行中に何も表示されなくても慌てない
+
+インストールコマンドは、ダウンロード中に進捗を表示しません。終わるまで待ってから、**新しいターミナルを開いて**確認します。
+
+### 初回起動とログイン
+
+プロジェクトのフォルダへ移動して `claude` を実行します。初回はログインを求められ、ブラウザで認証します。環境変数 `ANTHROPIC_API_KEY` を設定済みで、その利用を承認した場合はログイン画面が省略されます。ログイン後に切り替えたいときは、セッション内で `/login` を実行します。
+
+## ハンズオン
+
+1. お使いの環境のコマンドでインストールします（PowerShell の例）。
+
+   ```powershell
+   irm https://claude.ai/install.ps1 | iex
+   ```
+
+   macOS / Linux / WSL の場合は次のコマンドです。
+
+   ```bash
+   curl -fsSL https://claude.ai/install.sh | bash
+   ```
+
+2. **新しいターミナルを開き**、バージョンを確認します。
+
+   ```bash
+   claude --version
+   ```
+
+   期待される結果: `バージョン番号 (Claude Code)` の形式で表示されます。
+
+3. 診断コマンドで状態を確認します（読み取り専用で、セッションは始まりません）。
+
+   ```bash
+   claude doctor
+   ```
+
+   期待される結果: インストール状態や設定の診断結果が表示されます。
+
+4. プロジェクトのフォルダへ移動して起動します。
+
+   ```bash
+   cd path/to/your/project
+   claude
+   ```
+
+   期待される結果: 初回はブラウザでのログインを求められ、完了すると入力欄が表示されます。バージョン・モデル・作業ディレクトリが上部に出ます。
+
+5. 最初の質問を入力して Enter を押します。
+
+   ```text
+   what does this project do?
+   ```
+
+   日本語で `このプロジェクトは何をするものか教えて` と聞いても構いません。期待される結果: Claude がファイルを読み、概要を返します。
+
+6. `/exit` と入力して終了します。
+
+## よくある失敗
+
+- **`claude` が見つからない / 認識されない**
+  - 原因: インストール先が PATH（コマンドを探す場所の一覧）に入っていない、またはターミナルを開き直していない。
+  - 対処: 新しいターミナルを開く。それでも駄目なら PATH に追加する。macOS / Linux は `~/.local/bin`、Windows は `%USERPROFILE%\.local\bin` が対象です。
+- **PowerShell で `&&` のエラーが出る**
+  - 原因: CMD 用のコマンドを PowerShell で実行している。
+  - 対処: プロンプトが `PS C:\` なら PowerShell 用の `irm ... | iex` を使う。
+- **CMD で `'irm' は認識されません` と出る**
+  - 原因: 逆に PowerShell 用のコマンドを CMD で実行している。
+  - 対処: CMD 用のコマンドに切り替える。
+- **インストールスクリプトが `403` や `syntax error near unexpected token` で失敗する**
+  - 原因: スクリプトの代わりにエラーページが返されている（ネットワーク制限など）。
+  - 対処: 公式の「Troubleshoot installation」で該当するエラーを探す。
+- **ログインできない**
+  - 原因: 無料の claude.ai プランなど、Claude Code の対象外のアカウントを使っている。
+  - 対処: 対象のプランか Console アカウントでログインし直す（`/login`）。
+
+## 次へ
+
+[基本操作：対話・ファイル参照・結果の確認](/learn/basic/basic-usage)では、実際にファイルを参照しながら Claude と対話する基本操作を学びます。
