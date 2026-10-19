@@ -135,16 +135,67 @@ describe('実際のレッスン', () => {
     }
   });
 
-  it('「次へ」のリンク先が実在するレッスン（または中級の入口）を指している', () => {
-    const slugs = new Set(lessons.map((l) => l.slug));
+  it('中級9本・上級7本が、番号順にそろっている', () => {
+    const slugsOf = (level: string) => lessons.filter((l) => l.level === level).map((l) => l.slug);
+    expect(slugsOf('intermediate')).toEqual([
+      'settings',
+      'skills',
+      'subagents',
+      'rules',
+      'mcp',
+      'memory',
+      'git-workflow',
+      'worktree',
+      'headless',
+    ]);
+    expect(slugsOf('advanced')).toEqual([
+      'parallel-implementation',
+      'harness-engineering',
+      'custom-skill-agent',
+      'build-mcp',
+      'ci-integration',
+      'cost-context',
+      'team-operations',
+    ]);
+  });
+
+  it('レッスンの slug は、レベルをまたいでも重複しない', () => {
+    const slugs = lessons.map((l) => l.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+
+  it('本文中のサイト内リンク（/learn/...）は、すべて実在するレッスンを指す', () => {
+    const exists = new Set(lessons.map((l) => `${l.level}/${l.slug}`));
     for (const l of lessons) {
-      const next = l.body.slice(l.body.indexOf('## 次へ'));
-      const links = [...next.matchAll(/\]\(\/learn\/([a-z]+)\/([a-z0-9-]+)\)/g)];
-      expect(links.length, `${l.slug}: 次へのリンクが1つ以上必要`).toBeGreaterThan(0);
-      for (const [, level, slug] of links) {
-        // 中級・上級はフェーズ6で追加するため、今は基礎の実在のみ厳密に確認する
-        if (level === 'basic') expect(slugs.has(slug!), `${l.slug} → ${slug}`).toBe(true);
+      for (const [, level, slug] of l.body.matchAll(
+        /\]\(\/learn\/([a-z]+)\/([a-z0-9-]+)(?:#[^)]*)?\)/g,
+      )) {
+        expect(exists.has(`${level}/${slug}`), `${l.slug} → /learn/${level}/${slug}`).toBe(true);
       }
+    }
+  });
+
+  it('「次へ」には、次のレッスン（または最後だけロードマップ）へのリンクがある', () => {
+    for (const [i, l] of lessons.entries()) {
+      const next = l.body.slice(l.body.indexOf('## 次へ'));
+      const links = [...next.matchAll(/\]\((\/[^)\s]+)\)/g)].map((m) => m[1]);
+      expect(links.length, `${l.slug}: 次へのリンクが1つ以上必要`).toBeGreaterThan(0);
+      const isLast = i === lessons.length - 1;
+      if (isLast) expect(links, l.slug).toContain('/roadmap');
+      else {
+        const following = lessons[i + 1]!;
+        // 学習順（基礎→中級→上級）の次のレッスンへ、確実につながっていること
+        expect(links, `${l.slug} の次は ${following.slug}`).toContain(
+          `/learn/${following.level}/${following.slug}`,
+        );
+      }
+    }
+  });
+
+  it('クイズの正解位置が、レッスン内で全問同じにならない（位置から答えを推測できない）', () => {
+    for (const l of lessons) {
+      const positions = new Set(l.quiz.map((q) => q.answerIndex));
+      expect(positions.size, `${l.slug}: 正解位置が全問同じ`).toBeGreaterThanOrEqual(2);
     }
   });
 

@@ -1,38 +1,38 @@
 ---
-title: "MCPサーバーを自作する"
+title: 'MCPサーバーを自作する'
 level: advanced
 order: 4
-summary: "公式 TypeScript SDK でツールを 1 つ持つ最小の stdio サーバーを作り、claude mcp add で接続して動作を確認する。"
+summary: '公式 TypeScript SDK でツールを 1 つ持つ最小の stdio サーバーを作り、claude mcp add で接続して動作を確認する。'
 verifiedAt: '2026-10-19'
 quiz:
   - id: q1
     prompt: stdio で動く MCP サーバーのコードで、ログを出すときに避けるべきものはどれか。
     choices:
-      - "`console.error()`"
-      - "`console.log()`"
+      - '`console.error()`'
+      - '`console.log()`'
       - ファイルへのログ出力
     answerIndex: 1
     explanation: stdio のサーバーは、標準出力（stdout）で JSON-RPC メッセージをやり取りします。`console.log()` は stdout に書くため、メッセージが壊れてサーバーが動かなくなります。ログは stderr（`console.error()`）かファイルに出します。
   - id: q2
-    prompt: "`claude mcp add` で stdio サーバーを登録するとき、`--` の役割はどれか。"
+    prompt: '`claude mcp add` で stdio サーバーを登録するとき、`--` の役割はどれか。'
     choices:
       - サーバーを登録せず、一時的に起動するだけにする
       - Claude Code のオプションと、サーバーを起動するコマンドを区切る
       - サーバーのログを標準エラーに出す
     answerIndex: 1
-    explanation: "`--` より前が Claude Code 側のオプション（`--transport`、`--env`、`--scope`）で、後ろがサーバーを起動するコマンドと引数です。区切らないと、サーバー自身のフラグが Claude Code のオプションとして解釈されてしまいます。"
+    explanation: '`--` より前が Claude Code 側のオプション（`--transport`、`--env`、`--scope`）で、後ろがサーバーを起動するコマンドと引数です。区切らないと、サーバー自身のフラグが Claude Code のオプションとして解釈されてしまいます。'
   - id: q3
-    prompt: "`hello` という名前で登録した MCP サーバーの `add` ツールは、Claude Code の中でどんな名前で扱われるか（権限ルールなどで使う名前）。"
+    prompt: '`hello` という名前で登録した MCP サーバーの `add` ツールは、Claude Code の中でどんな名前で扱われるか（権限ルールなどで使う名前）。'
     choices:
-      - "`hello.add`"
-      - "`mcp_hello_add`"
-      - "`mcp__hello__add`"
+      - '`hello.add`'
+      - '`mcp_hello_add`'
+      - '`mcp__hello__add`'
     answerIndex: 2
     explanation: 公式では、MCP サーバーのツールは `mcp__<サーバー名>__<ツール名>` という名前になります。この名前は、権限ルール、subagent の `tools`、hooks の matcher で使います。
   - id: q4
     prompt: ビルド（`tsc`）をせずに登録だけして `claude mcp list` を見たら、接続に失敗していた。最も可能性が高い原因はどれか。
     choices:
-      - "`build/index.js` がまだ存在せず、起動コマンドが失敗している"
+      - '`build/index.js` がまだ存在せず、起動コマンドが失敗している'
       - zod をインストールしたせいで MCP が使えなくなっている
       - ツールの `description` を書いていないため接続が拒否される
     answerIndex: 0
@@ -132,29 +132,29 @@ stdio（標準入出力）方式では、Claude Code がサーバーをサブプ
 4. `src/index.ts` を作ります。公式チュートリアルの書き方（`McpServer`、`registerTool`、`serveStdio`）に沿った、ツール 1 つの最小構成です。
 
    ```typescript
-   import { McpServer } from "@modelcontextprotocol/server";
-   import { serveStdio } from "@modelcontextprotocol/server/stdio";
-   import { z } from "zod";
+   import { McpServer } from '@modelcontextprotocol/server';
+   import { serveStdio } from '@modelcontextprotocol/server/stdio';
+   import { z } from 'zod';
 
    // serveStdio は必要なたびにこの関数を呼ぶので、毎回新しいサーバーを返す
    function createServer() {
      const server = new McpServer({
-       name: "hello",
-       version: "1.0.0",
+       name: 'hello',
+       version: '1.0.0',
      });
 
      server.registerTool(
-       "add",
+       'add',
        {
-         description: "Add two numbers and return the sum",
+         description: 'Add two numbers and return the sum',
          inputSchema: z.object({
-           a: z.number().describe("First number"),
-           b: z.number().describe("Second number"),
+           a: z.number().describe('First number'),
+           b: z.number().describe('Second number'),
          }),
        },
        async ({ a, b }) => {
          return {
-           content: [{ type: "text", text: String(a + b) }],
+           content: [{ type: 'text', text: String(a + b) }],
          };
        },
      );
@@ -163,9 +163,9 @@ stdio（標準入出力）方式では、Claude Code がサーバーをサブプ
    }
 
    serveStdio(createServer, {
-     onerror: (error) => console.error("hello MCP server error:", error),
+     onerror: (error) => console.error('hello MCP server error:', error),
    });
-   console.error("hello MCP server running on stdio"); // stderr なら安全
+   console.error('hello MCP server running on stdio'); // stderr なら安全
    ```
 
 5. ビルドします。

@@ -36,19 +36,24 @@ terms:
 describe('loadReference（実データ）', () => {
   const { cheatsheet, glossary } = loadReference(slugs);
 
-  it('チートシートは指定の5セクションが、この順でそろっている', () => {
+  it('チートシートは、基礎5セクションに続けて、中級・上級の5セクションが、この順でそろっている', () => {
     expect(cheatsheet.sections.map((s) => s.id)).toEqual([
       'slash-commands',
       'shortcuts',
       'permission-modes',
       'cli',
       'memory',
+      'settings',
+      'extensions',
+      'mcp',
+      'automation',
+      'operations',
     ]);
     for (const s of cheatsheet.sections) expect(s.items.length, s.id).toBeGreaterThanOrEqual(5);
   });
 
   it('用語集に十分な語数があり、すべて実在のレッスンに紐づく', () => {
-    expect(glossary.terms.length).toBeGreaterThanOrEqual(15);
+    expect(glossary.terms.length).toBeGreaterThanOrEqual(35);
     for (const t of glossary.terms) expect(slugs.has(t.lesson), t.term).toBe(true);
   });
 

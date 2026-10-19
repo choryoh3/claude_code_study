@@ -1,42 +1,42 @@
 ---
-title: "CI連携：GitHub Actionsで使う"
+title: 'CI連携：GitHub Actionsで使う'
 level: advanced
 order: 5
 summary: 公式のGitHub Actions連携とヘッドレス実行を使い、シークレットと権限を守ったままPRレビューなどをCIに組み込む方法を学ぶ。
 verifiedAt: '2026-10-19'
 quiz:
   - id: q1
-    prompt: "CIで claude -p を実行するとき、公式がスクリプト用途に推奨する --bare を付ける主な理由はどれか。"
+    prompt: 'CIで claude -p を実行するとき、公式がスクリプト用途に推奨する --bare を付ける主な理由はどれか。'
     choices:
-      - "出力がJSON形式になり、後処理しやすくなるから"
-      - "実行環境ごとのフック・MCPサーバー・CLAUDE.mdなどの自動読み込みをスキップし、どのマシンでも同じ結果になりやすいから"
-      - "権限確認がすべて自動で承認され、--allowedTools が不要になるから"
+      - '出力がJSON形式になり、後処理しやすくなるから'
+      - '実行環境ごとのフック・MCPサーバー・CLAUDE.mdなどの自動読み込みをスキップし、どのマシンでも同じ結果になりやすいから'
+      - '権限確認がすべて自動で承認され、--allowedTools が不要になるから'
     answerIndex: 1
-    explanation: "--bare はフック、スキル、サブエージェント、プラグイン、MCPサーバー、自動メモリ、CLAUDE.md の自動検出をスキップして起動を速くし、実行環境の差を減らす。JSON出力は --output-format json の役割。権限の自動承認はしないので、必要なツールは --allowedTools などで明示する。"
+    explanation: '--bare はフック、スキル、サブエージェント、プラグイン、MCPサーバー、自動メモリ、CLAUDE.md の自動検出をスキップして起動を速くし、実行環境の差を減らす。JSON出力は --output-format json の役割。権限の自動承認はしないので、必要なツールは --allowedTools などで明示する。'
   - id: q2
-    prompt: "ワークフローでAPIキーを扱う方法として正しいものはどれか。"
+    prompt: 'ワークフローでAPIキーを扱う方法として正しいものはどれか。'
     choices:
-      - "リポジトリのSecretsに保存し、ワークフローでは secrets コンテキスト経由で渡す"
-      - "ワークフローYAMLに直接書き、リポジトリを非公開にして守る"
-      - "プロンプトに含めて、Claudeに必要なときだけ使わせる"
+      - 'リポジトリのSecretsに保存し、ワークフローでは secrets コンテキスト経由で渡す'
+      - 'ワークフローYAMLに直接書き、リポジトリを非公開にして守る'
+      - 'プロンプトに含めて、Claudeに必要なときだけ使わせる'
     answerIndex: 0
-    explanation: "公式は、APIキーやOAuthトークンをコミットせず、GitHub Secretsに保存して参照するよう求めている。非公開リポジトリでも、履歴や権限を持つ人経由で漏れうる。プロンプトに入れた値は会話内容として扱われ、ログや出力に出る恐れがある。"
+    explanation: '公式は、APIキーやOAuthトークンをコミットせず、GitHub Secretsに保存して参照するよう求めている。非公開リポジトリでも、履歴や権限を持つ人経由で漏れうる。プロンプトに入れた値は会話内容として扱われ、ログや出力に出る恐れがある。'
   - id: q3
-    prompt: "pull_request_target をトリガーにClaudeを動かすとき、最も重要な注意はどれか。"
+    prompt: 'pull_request_target をトリガーにClaudeを動かすとき、最も重要な注意はどれか。'
     choices:
-      - "ベースリポジトリのシークレットで動くので、信頼できないPRのコードをワークスペース直下にチェックアウトしない"
-      - "フォークからのPRでは動かないので、チェックアウトの設定は気にしなくてよい"
-      - "シークレットが自動的に隠されるので、権限の設定は不要である"
+      - 'ベースリポジトリのシークレットで動くので、信頼できないPRのコードをワークスペース直下にチェックアウトしない'
+      - 'フォークからのPRでは動かないので、チェックアウトの設定は気にしなくてよい'
+      - 'シークレットが自動的に隠されるので、権限の設定は不要である'
     answerIndex: 0
-    explanation: "pull_request_target と workflow_run は、ベースリポジトリのシークレットを持った状態で動く。PR側のコードを直下にチェックアウトすると、攻撃者の書いたファイルがその権限で実行・参照されうる。公式の推奨は、既定のチェックアウト（ベースブランチ）に留め、PRのファイルが必要なら別ディレクトリに置いて --add-dir で渡すこと。"
+    explanation: 'pull_request_target と workflow_run は、ベースリポジトリのシークレットを持った状態で動く。PR側のコードを直下にチェックアウトすると、攻撃者の書いたファイルがその権限で実行・参照されうる。公式の推奨は、既定のチェックアウト（ベースブランチ）に留め、PRのファイルが必要なら別ディレクトリに置いて --add-dir で渡すこと。'
   - id: q4
-    prompt: "Claudeがワークフロー内でPRにコミットを押したのに、既存のCIワークフローが起動しない。公式が挙げる原因はどれか。"
+    prompt: 'Claudeがワークフロー内でPRにコミットを押したのに、既存のCIワークフローが起動しない。公式が挙げる原因はどれか。'
     choices:
-      - "ANTHROPIC_API_KEY が未設定だから"
-      - "既定の GITHUB_TOKEN で作られたコミットは、GitHubの仕様でワークフローを起動しないから"
-      - "Claudeのコミットは必ずドラフト扱いになるから"
+      - 'ANTHROPIC_API_KEY が未設定だから'
+      - '既定の GITHUB_TOKEN で作られたコミットは、GitHubの仕様でワークフローを起動しないから'
+      - 'Claudeのコミットは必ずドラフト扱いになるから'
     answerIndex: 1
-    explanation: "公式のトラブルシューティングでは、GITHUB_TOKEN で行った操作はワークフローを起動しないとされる。github_token を渡している場合は外してGitHub Appとして動かすか、独自のAppトークンを使う。APIキー未設定は認証エラーの原因であり、CIが起動しない理由ではない。"
+    explanation: '公式のトラブルシューティングでは、GITHUB_TOKEN で行った操作はワークフローを起動しないとされる。github_token を渡している場合は外してGitHub Appとして動かすか、独自のAppトークンを使う。APIキー未設定は認証エラーの原因であり、CIが起動しない理由ではない。'
 ---
 
 ## ゴール
@@ -57,11 +57,11 @@ quiz:
 
 ### CIでClaudeを使う3つの方法
 
-| 方法 | 内容 | 向いている場面 |
-| :-- | :-- | :-- |
+| 方法                                       | 内容                                                                                             | 向いている場面                                        |
+| :----------------------------------------- | :----------------------------------------------------------------------------------------------- | :---------------------------------------------------- |
 | 公式Action `anthropics/claude-code-action` | ワークフローに組み込み、`@claude` メンション（対話モード）や `prompt` 指定（自動化モード）で動く | issueからPR作成、コメントでの修正依頼、独自のレビュー |
-| 公式の Code Review | ワークフローを書かずに、PRごとに自動レビューする | まず手軽に始めたいとき |
-| `claude -p` を自前で実行 | CLI（コマンドライン）をスクリプトやジョブから呼ぶ | 既存のCIやスクリプトへの組み込み |
+| 公式の Code Review                         | ワークフローを書かずに、PRごとに自動レビューする                                                 | まず手軽に始めたいとき                                |
+| `claude -p` を自前で実行                   | CLI（コマンドライン）をスクリプトやジョブから呼ぶ                                                | 既存のCIやスクリプトへの組み込み                      |
 
 このレッスンでは公式Actionと `claude -p` を扱います。Code Reviewの設定は公式ドキュメントを参照してください。
 
@@ -138,9 +138,9 @@ claude --bare -p "Summarize README.md" --allowedTools "Read"
          - uses: anthropics/claude-code-action@<40桁のコミットSHA> # v1
            with:
              anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-             plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
-             plugins: "code-review@claude-code-plugins"
-             prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+             plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+             plugins: 'code-review@claude-code-plugins'
+             prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
              claude_args: |
                --max-turns 10
                --allowedTools "mcp__github_inline_comment__create_inline_comment"

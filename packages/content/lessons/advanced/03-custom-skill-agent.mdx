@@ -1,8 +1,8 @@
 ---
-title: "カスタムskill・agentの設計"
+title: 'カスタムskill・agentの設計'
 level: advanced
 order: 3
-summary: "description の書き方、ツール権限の最小化、責務の絞り方、評価と改善の進め方を押さえて、使われる skill と subagent を設計する。"
+summary: 'description の書き方、ツール権限の最小化、責務の絞り方、評価と改善の進め方を押さえて、使われる skill と subagent を設計する。'
 verifiedAt: '2026-10-19'
 quiz:
   - id: q1
@@ -16,7 +16,7 @@ quiz:
   - id: q2
     prompt: Claude に自動で選ばれやすい description の書き方はどれか。
     choices:
-      - "「コードのレビューをします」とだけ短く書く"
+      - '「コードのレビューをします」とだけ短く書く'
       - 何をするかと、どんな依頼のときに使うかを、具体的な言い回しとともに書く
       - skill の手順の詳細をすべて description に書く
     answerIndex: 1
@@ -24,19 +24,19 @@ quiz:
   - id: q3
     prompt: デプロイやコミットのような副作用のある skill を、ユーザーが明示したときだけ動かしたい。どの設定が適切か。
     choices:
-      - "`user-invocable: false`"
-      - "`context: fork`"
-      - "`disable-model-invocation: true`"
+      - '`user-invocable: false`'
+      - '`context: fork`'
+      - '`disable-model-invocation: true`'
     answerIndex: 2
-    explanation: "`disable-model-invocation: true` にすると、ユーザーが `/skill-name` で呼んだときだけ動き、Claude は自動では呼べません。`user-invocable: false` は逆に、ユーザーのメニューから隠して Claude だけが使えるようにする設定です。"
+    explanation: '`disable-model-invocation: true` にすると、ユーザーが `/skill-name` で呼んだときだけ動き、Claude は自動では呼べません。`user-invocable: false` は逆に、ユーザーのメニューから隠して Claude だけが使えるようにする設定です。'
   - id: q4
     prompt: レビュー専用の subagent を安全に作りたい。frontmatter の設計として最も適切なものはどれか。
     choices:
-      - "`tools: Read, Glob, Grep` のように、必要最小限のツールだけを許可する"
+      - '`tools: Read, Glob, Grep` のように、必要最小限のツールだけを許可する'
       - ツールは指定せず、本文に「ファイルは編集しないこと」と書くだけにする
-      - "`tools` に使えそうなツールをすべて並べておく"
+      - '`tools` に使えそうなツールをすべて並べておく'
     answerIndex: 0
-    explanation: "`tools` は許可リストなので、必要なものだけを書くのが最小権限です。本文の指示は守られない可能性があり、強制ではありません。ツールを並べすぎると、意図しない書き込みや実行が可能になります。"
+    explanation: '`tools` は許可リストなので、必要なものだけを書くのが最小権限です。本文の指示は守られない可能性があり、強制ではありません。ツールを並べすぎると、意図しない書き込みや実行が可能になります。'
 ---
 
 ## ゴール
@@ -55,10 +55,10 @@ quiz:
 
 ### skill と subagent の使い分け
 
-| | skill | subagent |
-| --- | --- | --- |
-| 実体 | `.claude/skills/<name>/SKILL.md` | `.claude/agents/<name>.md` |
-| 動く場所 | 基本は今の会話の中 | 独立したコンテキストで実行 |
+|          | skill                                        | subagent                                                   |
+| -------- | -------------------------------------------- | ---------------------------------------------------------- |
+| 実体     | `.claude/skills/<name>/SKILL.md`             | `.claude/agents/<name>.md`                                 |
+| 動く場所 | 基本は今の会話の中                           | 独立したコンテキストで実行                                 |
 | 向く用途 | 手順・知識・定型作業を、必要なときに読み込む | 調査やレビューなど、大量の出力を隠して要約だけ返したい作業 |
 
 公式では、subagent は独自のコンテキスト・システムプロンプト・ツール権限・権限設定を持ち、元の会話の履歴は見えません。そのため、渡す指示は単体で完結させます。

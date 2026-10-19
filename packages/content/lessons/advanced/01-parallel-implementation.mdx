@@ -1,12 +1,12 @@
 ---
-title: "並列実装：subagentとworktreeで同時に進める"
+title: '並列実装：subagentとworktreeで同時に進める'
 level: advanced
 order: 1
-summary: "subagent と git worktree を使って作業を並列化し、担当範囲の分け方とマージの進め方まで設計できるようになる。"
+summary: 'subagent と git worktree を使って作業を並列化し、担当範囲の分け方とマージの進め方まで設計できるようになる。'
 verifiedAt: '2026-10-19'
 quiz:
   - id: q1
-    prompt: "`claude --worktree feature-auth` で作られる worktree は、デフォルトでは何を起点にブランチが切られるか。"
+    prompt: '`claude --worktree feature-auth` で作られる worktree は、デフォルトでは何を起点にブランチが切られるか。'
     choices:
       - 今いるブランチの最新のコミット（ローカルの HEAD）
       - リポジトリのデフォルトブランチ（通常は main）
@@ -16,19 +16,19 @@ quiz:
   - id: q2
     prompt: 複数の担当に作業を分けて並列実装する。衝突を最も減らせる分け方はどれか。
     choices:
-      - "`apps/api`、`apps/web` のようにパッケージ境界で分け、共有スキーマは並列に入る前に確定させる"
+      - '`apps/api`、`apps/web` のようにパッケージ境界で分け、共有スキーマは並列に入る前に確定させる'
       - 機能ごとに分けるが、どのファイルを触るかは各担当の判断に任せる
       - 全員が同じ共有スキーマを必要に応じて自由に編集する
     answerIndex: 0
     explanation: 触るファイルの集合が重ならないように分けるのが基本です。共有の契約（スキーマなど）は全員が依存するので、先に確定させてから並列に入ります。ファイルを各自の判断に任せたり、共有物を自由に編集したりすると、マージ時に衝突します。
   - id: q3
-    prompt: "カスタム subagent の frontmatter に `isolation: worktree` を書くと何が起きるか。"
+    prompt: 'カスタム subagent の frontmatter に `isolation: worktree` を書くと何が起きるか。'
     choices:
       - subagent が使えるツールが読み取り専用に制限される
       - subagent が別のモデルで実行される
       - subagent ごとに一時的な git worktree が作られ、変更がなければ自動で削除される
     answerIndex: 2
-    explanation: "`isolation: worktree` は subagent を一時的な worktree で動かす設定です。変更がなければ自動で削除され、変更があれば残ります。ツール制限は `tools`、モデルは `model` で指定します。"
+    explanation: '`isolation: worktree` は subagent を一時的な worktree で動かす設定です。変更がなければ自動で削除され、変更があれば残ります。ツール制限は `tools`、モデルは `model` で指定します。'
   - id: q4
     prompt: 並列化に向かない作業はどれか。
     choices:
@@ -57,10 +57,10 @@ quiz:
 
 公式ドキュメントは、並列で動かす方法をいくつか紹介しています。このレッスンで使うのは次の 2 つです。
 
-| 手段 | 何を分けるか | 向いている用途 |
-| --- | --- | --- |
-| subagent | コンテキスト（会話の記憶領域） | 調査や検証など、結果の要約だけが欲しい作業 |
-| git worktree | ファイル（作業ディレクトリとブランチ） | 同時に別々のファイルを編集する実装 |
+| 手段         | 何を分けるか                           | 向いている用途                             |
+| ------------ | -------------------------------------- | ------------------------------------------ |
+| subagent     | コンテキスト（会話の記憶領域）         | 調査や検証など、結果の要約だけが欲しい作業 |
+| git worktree | ファイル（作業ディレクトリとブランチ） | 同時に別々のファイルを編集する実装         |
 
 git worktree は、同じリポジトリを共有しつつ、別のディレクトリ・別のブランチにチェックアウトする Git の機能です。公式は、worktree が「ファイル編集を分離する」もの、subagent が「1 つのセッション内で作業を分ける」ものだと整理しています。
 

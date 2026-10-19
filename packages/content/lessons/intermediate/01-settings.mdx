@@ -1,5 +1,5 @@
 ---
-title: "settings.json：permissions・hooks・env"
+title: 'settings.json：permissions・hooks・env'
 level: intermediate
 order: 1
 summary: settings.json の置き場所と優先順位を押さえ、permissions で許可と拒否を決め、hooks で必ず実行したい処理を差し込む。
@@ -57,13 +57,13 @@ quiz:
 
 ### 置き場所と優先順位
 
-| 優先度 | 場所 | 誰に効くか |
-| :-- | :-- | :-- |
-| 1（高） | 組織の管理設定 | 組織全体。自分では上書きできない |
-| 2 | `claude --settings` | そのセッションだけ |
-| 3 | `.claude/settings.local.json` | 自分、このプロジェクトだけ |
-| 4 | `.claude/settings.json` | プロジェクトの全員（Gitで共有） |
-| 5（低） | `~/.claude/settings.json` | 自分、全プロジェクト |
+| 優先度  | 場所                          | 誰に効くか                       |
+| :------ | :---------------------------- | :------------------------------- |
+| 1（高） | 組織の管理設定                | 組織全体。自分では上書きできない |
+| 2       | `claude --settings`           | そのセッションだけ               |
+| 3       | `.claude/settings.local.json` | 自分、このプロジェクトだけ       |
+| 4       | `.claude/settings.json`       | プロジェクトの全員（Gitで共有）  |
+| 5（低） | `~/.claude/settings.json`     | 自分、全プロジェクト             |
 
 同じキーは優先度の高い側の値が使われます。ただし `permissions.allow` のような配列は、上書きではなく結合されます。ファイルが読み込まれたかは `/status` の `Setting sources` で確認できます。
 
@@ -100,7 +100,9 @@ CLAUDE.md の指示は「参考情報」で、守られる保証はありませ�
     "PreToolUse": [
       {
         "matcher": "Bash",
-        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.mjs\"" }]
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.mjs\"" }
+        ]
       }
     ]
   }
@@ -150,7 +152,10 @@ Gitで共有する `.claude/settings.json` にAPIキーなどの秘密は書か�
          {
            "matcher": "Bash",
            "hooks": [
-             { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/no-rm.mjs\"" }
+             {
+               "type": "command",
+               "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/no-rm.mjs\""
+             }
            ]
          }
        ]
@@ -182,6 +187,7 @@ Gitで共有する `.claude/settings.json` にAPIキーなどの秘密は書か�
    ```
 
    期待される結果: 読み取りが拒否されたという趣旨の応答になります。
+
 6. 続けて依頼します。
 
    ```text
@@ -189,6 +195,7 @@ Gitで共有する `.claude/settings.json` にAPIキーなどの秘密は書か�
    ```
 
    期待される結果: `rm` の実行がブロックされ、フックの stderr のメッセージが Claude に伝わります。
+
 7. `/permissions` を開き、設定した `deny` ルールが一覧に出ることを確認します。
 
 ## よくある失敗

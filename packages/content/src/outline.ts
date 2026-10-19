@@ -6,30 +6,13 @@ export interface PlannedTopic {
 }
 
 /**
- * 今後追加する予定のトピック（フェーズ6で執筆）。ロードマップに「準備中」として表示し、
- * 「次へ」リンクが切れないようにする。レッスンが追加されたら、ここから外す。
+ * 今後追加する予定のトピック。ロードマップに「準備中」として表示し、「次へ」リンクが切れないようにする。
+ * 現在は、中級・上級のトピックをすべて公開済みなので空。新しいトピックを予告するときは、ここに追加し、
+ * レッスンを公開したらここから外す。
  */
 export const PLANNED_TOPICS: Record<Exclude<Level, 'basic'>, PlannedTopic[]> = {
-  intermediate: [
-    { slug: 'settings', title: 'settings.json（permissions / hooks / env）' },
-    { slug: 'skills', title: 'skills：手順を再利用する' },
-    { slug: 'subagents', title: 'subagents：役割を分けて任せる' },
-    { slug: 'rules', title: 'rules：パス別に規約を伝える' },
-    { slug: 'mcp', title: 'MCP：外部ツールにつなぐ' },
-    { slug: 'memory', title: 'メモリ：覚えさせる・忘れさせる' },
-    { slug: 'git-workflow', title: 'gitワークフロー' },
-    { slug: 'worktree', title: 'worktree：作業を分離する' },
-    { slug: 'headless', title: 'ヘッドレス実行' },
-  ],
-  advanced: [
-    { slug: 'parallel-implementation', title: '並列実装（subagent / worktree）' },
-    { slug: 'harness-engineering', title: 'ハーネスエンジニアリング' },
-    { slug: 'custom-skill-agent', title: 'カスタムskill / agent設計' },
-    { slug: 'build-mcp', title: 'MCPを自作する' },
-    { slug: 'ci-integration', title: 'CI連携' },
-    { slug: 'cost-context', title: 'コスト・コンテキストの最適化' },
-    { slug: 'team-operations', title: 'チーム運用' },
-  ],
+  intermediate: [],
+  advanced: [],
 };
 
 export const LEVEL_LABELS: Record<Level, { name: string; tagline: string }> = {

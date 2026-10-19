@@ -25,8 +25,8 @@ export const BADGE_ICONS: Record<BadgeKey, LucideIcon> = {
 export const BADGE_HINTS: Record<BadgeKey, string> = {
   'first-lesson': 'レッスンを1つ完了にする',
   'basic-complete': '基礎のレッスンをすべて完了にする',
-  'intermediate-complete': '中級のレッスンをすべて完了にする（準備中）',
-  'advanced-complete': '上級のレッスンをすべて完了にする（準備中）',
+  'intermediate-complete': '中級のレッスンをすべて完了にする',
+  'advanced-complete': '上級のレッスンをすべて完了にする',
   'quiz-perfect': 'いずれかのクイズで全問正解する',
   'streak-3': '3日連続で、レッスンかクイズに取り組む',
   'streak-7': '7日連続で、レッスンかクイズに取り組む',
