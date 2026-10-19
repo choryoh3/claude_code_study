@@ -1,9 +1,10 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BADGE_DEFINITIONS } from './badges';
 import { createPrismaClient, type PrismaClient } from './client';
+import { applyMigrations } from './testing';
 
 // 実際のSQLiteファイルにマイグレーションを適用して検証する（モックしない）
 const dir = mkdtempSync(join(tmpdir(), 'claude-study-db-'));
@@ -12,23 +13,7 @@ let prisma: PrismaClient;
 
 beforeAll(async () => {
   prisma = createPrismaClient(url);
-  // Prisma CLI は起動が遅いため、マイグレーションのSQLを実際のSQLiteへ直接適用する
-  const migrationsDir = join(__dirname, '..', 'prisma', 'migrations');
-  const folders = readdirSync(migrationsDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort();
-  for (const folder of folders) {
-    const sql = readFileSync(join(migrationsDir, folder, 'migration.sql'), 'utf8');
-    for (const statement of sql.split(/;\s*(?:\r?\n|$)/)) {
-      const body = statement
-        .split(/\r?\n/)
-        .filter((line) => !line.trim().startsWith('--'))
-        .join('\n')
-        .trim();
-      if (body) await prisma.$executeRawUnsafe(body);
-    }
-  }
+  await applyMigrations(prisma);
 }, 60_000);
 
 afterAll(async () => {
