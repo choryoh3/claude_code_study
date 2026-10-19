@@ -31,3 +31,6 @@ packages/db/src/generated/
 
 # next
 next-env.d.ts
+
+# 画面キャプチャ（動作確認の証跡。サイズが大きくなるため git には含めない）
+evidence/
