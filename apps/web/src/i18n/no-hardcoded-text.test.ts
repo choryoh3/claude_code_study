@@ -76,7 +76,9 @@ describe('画面の文言をコードに直書きしない', () => {
       return findJapanese(file).map((h) => `${rel}:${h}`);
     });
     expect(violations, `辞書に移してください:\n${violations.join('\n')}`).toEqual([]);
-  });
+    // 全ソースを構文木に解析するため、他のテストと並行して動くと、既定の5秒を超えることがある
+    // （実際に 7 秒かかって、時間切れで失敗した）。このテストだけ、余裕を持たせる。
+  }, 30_000);
 
   it('例外の許可リストが、実在するファイルだけを指している', () => {
     const rels = new Set(files.map(toRel));

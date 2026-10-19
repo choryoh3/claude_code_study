@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import styles from './site-footer.module.css';
 
 export function SiteFooter() {
@@ -16,6 +17,10 @@ export function SiteFooter() {
           })}
         </p>
         <p className={styles.note}>{t('disclaimer')}</p>
+        <nav aria-label={t('legalLabel')} className={styles.legal}>
+          <Link href="/terms">{t('terms')}</Link>
+          <Link href="/privacy">{t('privacy')}</Link>
+        </nav>
       </div>
     </footer>
   );

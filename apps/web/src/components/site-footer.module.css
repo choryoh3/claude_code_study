@@ -20,3 +20,22 @@
 .note {
   font-size: var(--text-xs);
 }
+
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin-top: var(--space-2);
+}
+
+.legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem; /* タッチ操作しやすい 44px 以上 */
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.legal a:hover {
+  color: var(--text);
+}

@@ -105,7 +105,8 @@ export function ReferenceView({ sections, variant, searchLabel }: Props) {
             key={section.id}
             id={section.id}
             className={styles.section}
-            aria-labelledby={`${section.id}-h`}
+            // 見出しを出すのは、節が複数あるときだけ。見出しが無いのに参照すると、存在しないIDを指してしまう
+            aria-labelledby={sections.length > 1 ? `${section.id}-h` : undefined}
           >
             {sections.length > 1 && <h2 id={`${section.id}-h`}>{section.title}</h2>}
             <dl className={styles.list}>

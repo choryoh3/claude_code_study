@@ -8,6 +8,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { MobileTabBar } from '@/components/site-nav';
 import { getLessonLinks, getLessons, getReference } from '@/lib/lessons';
+import { getSiteUrl } from '@/lib/site-url';
 import type { ReferenceEntry } from '@/lib/palette-logic';
 import './globals.css';
 
@@ -16,6 +17,17 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: t('siteName'), template: `%s | ${t('siteName')}` },
     description: t('siteDescription'),
+    // 相対URLの canonical・OGP を、公開URLを基準に絶対URLへ解決する
+    metadataBase: getSiteUrl(),
+    alternates: { canonical: '/' },
+    openGraph: {
+      type: 'website',
+      siteName: t('siteName'),
+      title: t('siteName'),
+      description: t('siteDescription'),
+      locale: 'ja_JP',
+    },
+    twitter: { card: 'summary', title: t('siteName'), description: t('siteDescription') },
   };
 }
 

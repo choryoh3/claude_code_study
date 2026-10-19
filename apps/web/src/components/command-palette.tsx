@@ -245,12 +245,12 @@ export function PaletteTrigger() {
       className={styles.trigger}
       onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
       aria-label={t('open')}
+      // ショートカットを支援技術にも伝える（見た目の「Ctrl K」は CSS の疑似要素なので、読み上げ名には影響しない）
+      aria-keyshortcuts="Control+K Meta+K"
+      data-shortcut={t('triggerKey')}
     >
       <Search size={18} aria-hidden="true" />
       <span className={styles.triggerLabel}>{t('trigger')}</span>
-      <kbd className={styles.triggerKey} aria-hidden="true">
-        {t('triggerKey')}
-      </kbd>
     </button>
   );
 }
