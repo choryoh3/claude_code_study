@@ -60,6 +60,11 @@ function update(next: (current: GuestProgress) => GuestProgress) {
   for (const l of listeners) l();
 }
 
+/** 統合した結果などで、状態を丸ごと置き換える（ログイン時の同期で使う） */
+export function replaceProgress(next: GuestProgress) {
+  update(() => next);
+}
+
 export function setLessonStatus(slug: string, status: ProgressStatus) {
   update((p) => withStatus(p, slug, status, new Date()));
 }
