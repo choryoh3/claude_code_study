@@ -62,7 +62,7 @@ jobs:
 
       # 例外（意図的に許容する指摘）は .github/zizmor.yml に理由付きで記録する。
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
           # advanced-security: false + annotations: true
           #   指摘を PR の該当行に注釈として表示し、指摘があればジョブを失敗させる。
